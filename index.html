@@ -1990,6 +1990,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="knn.js"></script>
 <script>
 /**
  * k-NN Grapher - Desmos Style Interactive Simulator
@@ -2054,8 +2055,9 @@ const STATE = {
     speed: 1.0,
     stepTimer: null,
 
-    // Step 2: Distance measuring animation (0.0 -> 1.0)
+    // Step 2: Distance measuring animation (0.0 -> 1.0) & Region reveal
     measuringProgress: 0.0,
+    measureRegionOpacity: 0.0,
 
     // Step 3: Neighbor selection & boundary trace & exterior fade
     colorTransitionProgress: 0.0,
@@ -2147,7 +2149,7 @@ const STATE = {
     if (PSEUDO_STATE.stepTimer) clearTimeout(PSEUDO_STATE.stepTimer);
 
     // Durations for each step (in ms, scaled by speed): 0: idle, 1: init, 2: measure, 3: select & filter, 4: vote
-    const baseDurations = [0, 1300, 1800, 2600, 3200];
+    const baseDurations = [0, 1300, 2000, 2600, 3200];
     const duration = (baseDurations[PSEUDO_STATE.currentStep] || 1600) / PSEUDO_STATE.speed;
 
     PSEUDO_STATE.stepTimer = setTimeout(() => {
@@ -2174,6 +2176,7 @@ const STATE = {
     PSEUDO_STATE.currentStep = 0;
     PSEUDO_STATE.exteriorOpacity = 1.0;
     PSEUDO_STATE.measuringProgress = 0.0;
+    PSEUDO_STATE.measureRegionOpacity = 0.0;
     PSEUDO_STATE.colorTransitionProgress = 0.0;
     PSEUDO_STATE.enclosingProgress = 0.0;
     PSEUDO_STATE.votingOrbs = [];
@@ -2194,6 +2197,7 @@ const STATE = {
       if (tally) tally.style.display = 'none';
       PSEUDO_STATE.exteriorOpacity = 1.0;
       PSEUDO_STATE.measuringProgress = 0.0;
+      PSEUDO_STATE.measureRegionOpacity = 0.0;
       PSEUDO_STATE.colorTransitionProgress = 0.0;
       PSEUDO_STATE.enclosingProgress = 0.0;
       PSEUDO_STATE.votingOrbs = [];
@@ -2202,6 +2206,8 @@ const STATE = {
     } else if (stepIndex === 2) {
       if (tally) tally.style.display = 'none';
       PSEUDO_STATE.exteriorOpacity = 1.0;
+      PSEUDO_STATE.measuringProgress = 0.0;
+      PSEUDO_STATE.measureRegionOpacity = 0.0;
       PSEUDO_STATE.colorTransitionProgress = 0.0;
       PSEUDO_STATE.enclosingProgress = 0.0;
       PSEUDO_STATE.votingOrbs = [];
@@ -2211,12 +2217,14 @@ const STATE = {
     } else if (stepIndex === 3) {
       if (tally) tally.style.display = 'none';
       PSEUDO_STATE.measuringProgress = 1.0;
+      PSEUDO_STATE.measureRegionOpacity = 1.0;
       PSEUDO_STATE.votingOrbs = [];
       PSEUDO_STATE.impactRipples = [];
       PSEUDO_STATE.winnerAnnounced = false;
       animateSelectNeighbors();
     } else if (stepIndex === 4) {
       PSEUDO_STATE.measuringProgress = 1.0;
+      PSEUDO_STATE.measureRegionOpacity = 1.0;
       PSEUDO_STATE.colorTransitionProgress = 1.0;
       PSEUDO_STATE.enclosingProgress = 1.0;
       PSEUDO_STATE.exteriorOpacity = 0.0;
@@ -2229,17 +2237,32 @@ const STATE = {
 
   function animateDistanceMeasuring() {
     const startTime = performance.now();
-    const duration = 1400 / PSEUDO_STATE.speed;
+    const duration = 1800 / PSEUDO_STATE.speed;
     PSEUDO_STATE.measuringProgress = 0.0;
+    PSEUDO_STATE.measureRegionOpacity = 0.0;
+
     function sweep(now) {
       if (PSEUDO_STATE.currentStep !== 2) return;
       const progress = Math.min(1.0, (now - startTime) / duration);
-      PSEUDO_STATE.measuringProgress = progress;
-      requestDraw2D();
-      if (progress < 1.0) {
-        requestAnimationFrame(sweep);
+
+      // Phase A (0.0 -> 0.55): Distance lines shoot out from Z to all data points
+      const lineP = Math.min(1.0, progress / 0.55);
+      PSEUDO_STATE.measuringProgress = lineP;
+
+      // Phase B (0.55 -> 1.0): ONLY AFTER lines reach all points, decision regions fade in
+      if (progress < 0.55) {
+        PSEUDO_STATE.measureRegionOpacity = 0.0;
       } else {
+        const regionP = Math.min(1.0, (progress - 0.55) / 0.45);
+        PSEUDO_STATE.measureRegionOpacity = easeOutQuad(regionP);
+      }
+
+      requestDraw2D();
+      if (progress < 1.0 && PSEUDO_STATE.currentStep === 2) {
+        requestAnimationFrame(sweep);
+      } else if (PSEUDO_STATE.currentStep === 2) {
         PSEUDO_STATE.measuringProgress = 1.0;
+        PSEUDO_STATE.measureRegionOpacity = 1.0;
         requestDraw2D();
       }
     }
@@ -2607,59 +2630,7 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 2400);
 }
 
-// Distance Functions
-const DIST = {
-  euclid: (a, b) => {
-    let s = 0;
-    for (let i = 0; i < a.length; i++) {
-      const d = a[i] - b[i];
-      s += d * d;
-    }
-    return Math.sqrt(s);
-  },
-  manhattan: (a, b) => {
-    let s = 0;
-    for (let i = 0; i < a.length; i++) {
-      s += Math.abs(a[i] - b[i]);
-    }
-    return s;
-  },
-  chebyshev: (a, b) => {
-    let m = 0;
-    for (let i = 0; i < a.length; i++) {
-      m = Math.max(m, Math.abs(a[i] - b[i]));
-    }
-    return m;
-  },
-  cosine: (a, b) => {
-    let dot = 0, na = 0, nb = 0;
-    for (let i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      na += a[i] * a[i];
-      nb += b[i] * b[i];
-    }
-    return (na > 0 && nb > 0) ? 1 - dot / (Math.sqrt(na) * Math.sqrt(nb)) : 1;
-  }
-};
-
-// Calculate Min-Max bounding box for normalization (always compute 3 dimensions to prevent NaN)
-function getBounds() {
-  if (STATE.data.length === 0) return { min: [0, 0, 0], max: [1, 1, 1] };
-  const dims = 3;
-  const min = Array(dims).fill(Infinity);
-  const max = Array(dims).fill(-Infinity);
-  STATE.data.forEach(p => {
-    const coords = [p.x, p.y, p.z || 0];
-    for (let i = 0; i < dims; i++) {
-      if (coords[i] < min[i]) min[i] = coords[i];
-      if (coords[i] > max[i]) max[i] = coords[i];
-    }
-  });
-  for (let i = 0; i < dims; i++) {
-    if (min[i] === max[i]) { min[i] -= 1; max[i] += 1; }
-  }
-  return { min, max };
-}
+// (Distance metrics DIST & normalization getBounds are loaded from knn.js)
 
 // Pre-allocated typed arrays for ultra-fast KNN computation
 let arrX = new Float32Array(0);
@@ -2701,7 +2672,7 @@ function syncDataArrays() {
   }
 }
 
-// Regression Colormap & Value Helpers
+// Regression Colormap & Value Helpers for UI rendering
 function getDatasetValueBounds() {
   if (!STATE.data || STATE.data.length === 0) return { min: 0, max: 1 };
   let min = Infinity, max = -Infinity;
@@ -2786,116 +2757,7 @@ function star(c, x, y, R) {
   c.closePath();
 }
 
-// k-NN Prediction Core for Query Point Z
-function predictKNN(pointCoords, customK = STATE.k) {
-  if (STATE.data.length === 0) {
-    return { label: -1, nearest: [], votes: {}, weights: {}, r: 0, distances: [] };
-  }
-
-  const dims = 2;
-  const fDist = DIST[STATE.metric];
-  const { min, max } = STATE.norm ? getBounds() : { min: null, max: null };
-
-  const normPoint = STATE.norm
-    ? pointCoords.slice(0, dims).map((v, i) => (v - min[i]) / (max[i] - min[i]))
-    : pointCoords.slice(0, dims);
-
-  const distances = STATE.data.map((p, idx) => {
-    const raw = [p.x, p.y, p.z || 0].slice(0, dims);
-    const pCoords = STATE.norm
-      ? raw.map((v, i) => (v - min[i]) / (max[i] - min[i]))
-      : raw;
-    return {
-      index: idx,
-      point: p,
-      dist: fDist(normPoint, pCoords)
-    };
-  });
-
-  // Stable sort by distance
-  distances.sort((a, b) => a.dist - b.dist || a.index - b.index);
-
-  const kActual = Math.min(customK, distances.length);
-  const nearest = distances.slice(0, kActual);
-  const r = nearest.length > 0 ? nearest[nearest.length - 1].dist : 0;
-
-  // Tally votes
-  const votes = {};
-  const weights = {};
-  STATE.classes.forEach(c => {
-    votes[c.id] = 0;
-    weights[c.id] = 0;
-  });
-
-  nearest.forEach(n => {
-    const cid = n.point.c;
-    if (votes[cid] !== undefined) votes[cid]++;
-    const w = STATE.weighting ? 1 / (n.dist + 1e-5) : 1;
-    if (weights[cid] !== undefined) weights[cid] += w;
-  });
-
-  // Determine winner
-  let bestClass = -1;
-  let maxScore = -1;
-  const tiedClasses = [];
-
-  STATE.classes.forEach(c => {
-    const score = STATE.weighting ? weights[c.id] : votes[c.id];
-    if (score > maxScore) {
-      maxScore = score;
-      bestClass = c.id;
-      tiedClasses.length = 0;
-      tiedClasses.push(c.id);
-    } else if (score === maxScore && score > 0) {
-      tiedClasses.push(c.id);
-    }
-  });
-
-  // Tie-breaking: closest neighbor
-  if (tiedClasses.length > 1) {
-    for (const n of nearest) {
-      if (tiedClasses.includes(n.point.c)) {
-        bestClass = n.point.c;
-        break;
-      }
-    }
-  }
-
-  if (STATE.task === 'regression') {
-    let sumY = 0;
-    let sumW = 0;
-    let minY = Infinity, maxY = -Infinity;
-
-    nearest.forEach(n => {
-      const v = (n.point.val !== undefined) ? n.point.val : n.point.y;
-      if (v < minY) minY = v;
-      if (v > maxY) maxY = v;
-      const w = STATE.weighting ? 1 / (n.dist + 1e-5) : 1;
-      sumY += v * w;
-      sumW += w;
-    });
-
-    const yHat = sumW > 0 ? (sumY / sumW) : 0;
-    const yMean = nearest.length > 0 ? (nearest.reduce((s, n) => s + ((n.point.val !== undefined) ? n.point.val : n.point.y), 0) / nearest.length) : 0;
-
-    return {
-      label: -1,
-      isRegression: true,
-      yHat: +yHat.toFixed(2),
-      yMean: +yMean.toFixed(2),
-      yMin: minY !== Infinity ? +minY.toFixed(2) : 0,
-      yMax: maxY !== -Infinity ? +maxY.toFixed(2) : 0,
-      nearest,
-      votes: {},
-      counts: {},
-      weights: {},
-      r,
-      distances
-    };
-  }
-
-  return { label: bestClass, nearest, votes, counts: votes, weights, r, distances, isRegression: false };
-}
+// (predictKNN algorithm core is loaded from knn.js for clear separation of concerns)
 
 /* ==========================================================
    2D DESMOS ENGINE & HIGH-PERFORMANCE DECISION BOUNDARY
@@ -3212,10 +3074,14 @@ function draw2D() {
   ctx2d.fillStyle = '#ffffff';
   ctx2d.fillRect(0, 0, w, h);
 
-  // 1. Decision Boundary Background (Fades away in Step 3+)
+  // 1. Decision Boundary Background (Hidden in Step 1, appears after distance lines in Step 2, fades out in Step 3+)
   if (STATE.showRegions) {
     let regionAlpha = 1.0;
-    if (PSEUDO_STATE.currentStep >= 3) {
+    if (PSEUDO_STATE.currentStep === 1) {
+      regionAlpha = 0.0;
+    } else if (PSEUDO_STATE.currentStep === 2) {
+      regionAlpha = Math.max(0, Math.min(1.0, PSEUDO_STATE.measureRegionOpacity || 0.0));
+    } else if (PSEUDO_STATE.currentStep >= 3) {
       regionAlpha = Math.max(0, PSEUDO_STATE.exteriorOpacity);
     }
     if (regionAlpha > 0.02) {
@@ -3760,10 +3626,11 @@ function draw2D() {
   // 7. Query Point Z (Star marker + pulse halo)
   const predCls = STATE.classes.find(c => c.id === pred.label);
   const zDefaultColor = isRegression ? getColorForValue(pred.yHat, valBounds.min, valBounds.max) : (predCls ? predCls.color : '#f59e0b');
-  let zColor = zDefaultColor;
-  if (PSEUDO_STATE.currentStep === 4) {
-    zColor = (PSEUDO_STATE.winnerAnnounced) ? zDefaultColor : '#f59e0b';
-  }
+
+  // Point Z remains unclassified (neutral slate gray #94a3b8) during Steps 1..3 and Step 4 before votes arrive
+  const isUnclassified = (PSEUDO_STATE.currentStep >= 1 && PSEUDO_STATE.currentStep <= 3) ||
+                         (PSEUDO_STATE.currentStep === 4 && !PSEUDO_STATE.winnerAnnounced);
+  const zColor = isUnclassified ? '#94a3b8' : zDefaultColor;
 
   ctx2d.save();
   // Outer subtle halo (Pulsing softly in Step 1)
@@ -3771,7 +3638,7 @@ function draw2D() {
   const haloR = isPulsing ? 14 + 4 * Math.sin(performance.now() * 0.007) : 14;
   ctx2d.beginPath();
   ctx2d.arc(sz.x, sz.y, haloR, 0, Math.PI * 2);
-  ctx2d.fillStyle = 'rgba(245, 158, 11, 0.2)';
+  ctx2d.fillStyle = isUnclassified ? 'rgba(148, 163, 184, 0.28)' : 'rgba(245, 158, 11, 0.2)';
   ctx2d.fill();
 
   // 5-pointed Star
@@ -3779,7 +3646,7 @@ function draw2D() {
   ctx2d.fillStyle = zColor;
   ctx2d.fill();
   ctx2d.lineWidth = 1.3;
-  ctx2d.strokeStyle = '#000000';
+  ctx2d.strokeStyle = isUnclassified ? '#475569' : '#000000';
   ctx2d.stroke();
   ctx2d.restore();
 
@@ -4739,7 +4606,13 @@ function updatePredictionUI(pred) {
   const badge = $('pred-badge');
   const cls = STATE.classes.find(c => c.id === pred.label);
 
-  if (isRegression) {
+  const isUnclassified = (PSEUDO_STATE.currentStep >= 1 && PSEUDO_STATE.currentStep <= 3) ||
+                         (PSEUDO_STATE.currentStep === 4 && !PSEUDO_STATE.winnerAnnounced);
+
+  if (isUnclassified) {
+    badge.textContent = 'Chưa xác định';
+    badge.style.background = '#94a3b8';
+  } else if (isRegression) {
     badge.textContent = `ŷ = ${pred.yHat.toFixed(2)}`;
     badge.style.background = getColorForValue(pred.yHat);
   } else if (cls && pred.label !== -1) {
@@ -4751,7 +4624,9 @@ function updatePredictionUI(pred) {
   }
 
   // Radius badge
-  if (STATE.metric === 'cosine') {
+  if (isUnclassified && PSEUDO_STATE.currentStep < 3) {
+    $('radius-badge').textContent = 'R = Chưa đo';
+  } else if (STATE.metric === 'cosine') {
     const zNorm = Math.hypot(STATE.z.x, STATE.z.y);
     if (zNorm < 1e-4) {
       $('radius-badge').textContent = 'Z=(0,0,0) (Chưa xác định hướng)';
@@ -4772,7 +4647,7 @@ function updatePredictionUI(pred) {
 
   // Cache signature: if prediction outcome and nearest set are identical, skip heavy DOM rebuild
   const nearestIds = pred.nearest.map(n => n.point.id + ':' + n.dist.toFixed(2)).join(',');
-  const predSignature = `${STATE.k}|${STATE.metric}|${STATE.weighting}|${STATE.norm}|${pred.label}|${nearestIds}`;
+  const predSignature = `${STATE.k}|${STATE.metric}|${STATE.weighting}|${STATE.norm}|${pred.label}|${nearestIds}|${PSEUDO_STATE.currentStep}|${PSEUDO_STATE.winnerAnnounced}`;
   if (predSignature === lastPredSignature) {
     return;
   }
@@ -4781,7 +4656,18 @@ function updatePredictionUI(pred) {
   // Vote bars (Classification) or Value Gauge (Regression)
   const barsContainer = $('votes-bars');
   barsContainer.innerHTML = '';
-  if (isRegression) {
+  if (isUnclassified) {
+    const stepNum = PSEUDO_STATE.currentStep;
+    const msg = stepNum === 1
+      ? 'Bước 1: Khởi tạo Z (Chưa xét nhãn)'
+      : (stepNum === 2 ? 'Bước 2: Đang đo khoảng cách' : 'Bước 3: Chọn k láng giềng');
+    barsContainer.innerHTML = `
+      <div style="font-size:0.78rem; color:#64748b; text-align:center; padding:10px 4px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px;">
+        <div style="font-weight:600; color:#475569; margin-bottom:2px;">${msg}</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">Kết quả bỏ phiếu sẽ hiển thị ở Bước 4</div>
+      </div>
+    `;
+  } else if (isRegression) {
     const valBounds = getDatasetValueBounds();
     const pct = ((pred.yHat - valBounds.min) / ((valBounds.max - valBounds.min) || 1) * 100).toFixed(1);
     const color = getColorForValue(pred.yHat);
@@ -4840,49 +4726,55 @@ function updatePredictionUI(pred) {
   const tbody = $('nb-tbody');
   if (tbody) {
     tbody.innerHTML = '';
-    pred.nearest.forEach((n, idx) => {
-      const nCls = STATE.classes.find(c => c.id === n.point.c) || { name: '?', color: '#64748b' };
-      const val1 = info.format1(n.point);
-      const val2 = info.format2(n.point);
-      const chipColor = isRegression ? getColorForValue(n.point.val) : nCls.color;
-      const chipText = isRegression ? `Giá trị: ${n.point.val}` : nCls.name;
+    if (PSEUDO_STATE.currentStep === 1) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Đang ở Bước 1: Khởi tạo Z (Chưa tính khoảng cách)</td></tr>';
+    } else if (PSEUDO_STATE.currentStep === 2 && PSEUDO_STATE.measureRegionOpacity < 1.0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Bước 2: Đang đo khoảng cách tới các điểm...</td></tr>';
+    } else {
+      pred.nearest.forEach((n, idx) => {
+        const nCls = STATE.classes.find(c => c.id === n.point.c) || { name: '?', color: '#64748b' };
+        const val1 = info.format1(n.point);
+        const val2 = info.format2(n.point);
+        const chipColor = isRegression ? getColorForValue(n.point.val) : nCls.color;
+        const chipText = isRegression ? `Giá trị: ${n.point.val}` : nCls.name;
 
-      const tr = document.createElement('tr');
-      tr.className = `nb-row-item ${hoveredPoint === n.point ? 'highlighted' : ''}`;
-      tr.dataset.id = n.point.id;
-      tr.title = `Mẫu #${n.point.id + 1} - Nhấp để định vị trên đồ thị`;
+        const tr = document.createElement('tr');
+        tr.className = `nb-row-item ${hoveredPoint === n.point ? 'highlighted' : ''}`;
+        tr.dataset.id = n.point.id;
+        tr.title = `Mẫu #${n.point.id + 1} - Nhấp để định vị trên đồ thị`;
 
-      tr.innerHTML = `
-        <td style="color:#64748b; font-weight:600;"><span class="badge-rank">#${idx + 1}</span></td>
-        <td>
-          <span class="class-chip-tag" style="background:${chipColor}18; color:${chipColor}; border:1px solid ${chipColor}44;">
-            <span class="class-chip-dot" style="background:${chipColor};"></span>
-            ${chipText}
-          </span>
-        </td>
-        <td class="feat-val">${val1}</td>
-        <td class="feat-val">${val2}</td>
-        <td class="dist-val">${n.dist.toFixed(3)}</td>
-      `;
+        tr.innerHTML = `
+          <td style="color:#64748b; font-weight:600;"><span class="badge-rank">#${idx + 1}</span></td>
+          <td>
+            <span class="class-chip-tag" style="background:${chipColor}18; color:${chipColor}; border:1px solid ${chipColor}44;">
+              <span class="class-chip-dot" style="background:${chipColor};"></span>
+              ${chipText}
+            </span>
+          </td>
+          <td class="feat-val">${val1}</td>
+          <td class="feat-val">${val2}</td>
+          <td class="dist-val">${n.dist.toFixed(3)}</td>
+        `;
 
-      tr.onmouseenter = () => {
-        hoveredPoint = n.point;
-        syncHoveredTableRow(n.point);
-        requestDraw2D();
-      };
-      tr.onmouseleave = () => {
-        if (hoveredPoint === n.point) {
-          hoveredPoint = null;
-          syncHoveredTableRow(null);
+        tr.onmouseenter = () => {
+          hoveredPoint = n.point;
+          syncHoveredTableRow(n.point);
           requestDraw2D();
-        }
-      };
-      tr.onclick = () => {
-        focusPoint(n.point);
-      };
+        };
+        tr.onmouseleave = () => {
+          if (hoveredPoint === n.point) {
+            hoveredPoint = null;
+            syncHoveredTableRow(null);
+            requestDraw2D();
+          }
+        };
+        tr.onclick = () => {
+          focusPoint(n.point);
+        };
 
-      tbody.appendChild(tr);
-    });
+        tbody.appendChild(tr);
+      });
+    }
   }
 
   if ($('points-total-badge')) $('points-total-badge').textContent = `${STATE.data.length} điểm`;
