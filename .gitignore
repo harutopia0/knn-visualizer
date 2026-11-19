@@ -1,0 +1,5 @@
+.impeccable/
+.playwright-mcp/
+PRODUCT.md
+DESIGN.md
+__pycache__/

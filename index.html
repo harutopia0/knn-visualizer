@@ -1,0 +1,5627 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>k-NN Grapher · Trực quan hóa thuật toán k-NN</title>
+  <style>
+                :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --bg: #ffffff;
+      --sidebar-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent-z: #f59e0b;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Header Toolbar */
+    .header {
+      height: 52px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 20;
+      flex-shrink: 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #0f172a;
+      user-select: none;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 15px;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .brand-sub {
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      padding: 2px 7px;
+      border-radius: 12px;
+      margin-left: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preset-select-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .preset-select {
+      appearance: none;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 30px 6px 12px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .preset-select:hover, .preset-select:focus {
+      border-color: var(--primary);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 10px;
+      pointer-events: none;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.12s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: #f8fafc;
+      border-color: var(--border-dark);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-danger {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .btn-danger:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+    /* Main Workspace */
+    .workspace {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Tool Segmented Toggle */
+    .tool-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .tool-btn {
+      padding: 7px 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.12s;
+    }
+
+    .tool-btn:hover {
+      background: #f8fafc;
+      color: var(--text);
+    }
+
+    .tool-btn.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Class Palette */
+    .class-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .class-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px 4px 6px;
+      border-radius: 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1.5px solid transparent;
+      background: #f1f5f9;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .class-chip:hover {
+      background: #e2e8f0;
+    }
+
+    .class-chip.active {
+      border-color: #0f172a;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .class-count {
+      font-size: 0.72rem;
+      background: rgba(0, 0, 0, 0.08);
+      padding: 1px 5px;
+      border-radius: 10px;
+      color: var(--text-muted);
+    }
+
+    .add-class-btn {
+      padding: 3px 8px;
+      font-size: 0.78rem;
+      border: 1px dashed var(--border-dark);
+      border-radius: 14px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .add-class-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .hint-text {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* KNN Parameters */
+    .param-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .param-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+
+    .param-val {
+      font-family: var(--font-mono);
+      color: var(--primary);
+      font-size: 0.88rem;
+      background: var(--primary-light);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .slider-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+    }
+
+    .slider-btn:hover {
+      background: #f1f5f9;
+    }
+
+    input[type=range] {
+      flex: 1;
+      height: 5px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Metric Grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .metric-btn {
+      padding: 6px 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+
+    .metric-btn:hover {
+      background: #f8fafc;
+    }
+
+    .metric-btn.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Checkbox & Radio Toggles */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 34px;
+      height: 18px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-round {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #cbd5e1;
+      transition: .2s;
+      border-radius: 18px;
+    }
+
+    .slider-round:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-round {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider-round:before {
+      transform: translateX(16px);
+    }
+
+    /* Prediction Card */
+    .pred-badge-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    .pred-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .pred-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Coordinates Inputs */
+    .coords-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .coords-grid.three-col {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .coord-item {
+      display: flex;
+      align-items: center;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      gap: 6px;
+    }
+
+    .coord-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .coord-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      outline: none;
+      color: var(--text);
+    }
+
+    /* Vote Progress Bars */
+    .votes-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .vote-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.78rem;
+    }
+
+    .vote-label-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .progress-track {
+      height: 6px;
+      border-radius: 3px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.15s ease;
+    }
+
+    /* ==========================================================
+       FLOATING DRAGGABLE & RESIZABLE POPUP BOXES
+       ========================================================== */
+    .floating-popup {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
+      display: flex;
+      flex-direction: column;
+      z-index: 120;
+      resize: both;
+      overflow: hidden;
+      min-width: 280px;
+      min-height: 120px;
+      max-width: calc(100% - 32px);
+      max-height: calc(100% - 32px);
+      backdrop-filter: blur(10px);
+      transition: box-shadow 0.2s ease;
+      touch-action: none;
+    }
+    .floating-popup:focus-within {
+      border-color: #93c5fd;
+      box-shadow: 0 16px 32px -4px rgba(37, 99, 235, 0.18), 0 6px 12px -2px rgba(37, 99, 235, 0.1);
+    }
+    .floating-popup.collapsed {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: 42px !important;
+      resize: none !important;
+      overflow: hidden !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1) !important;
+    }
+    .floating-popup.collapsed .popup-header {
+      border-bottom: none !important;
+    }
+    .floating-popup.collapsed .popup-body,
+    .floating-popup.collapsed .elem-filter-tabs,
+    .floating-popup.collapsed .elem-toolbar,
+    .floating-popup.collapsed .pseudo-panel-subbar,
+    .floating-popup.collapsed .popup-resize-corner {
+      display: none !important;
+    }
+    .popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      flex-shrink: 0;
+      touch-action: none;
+    }
+    .popup-header:active {
+      cursor: grabbing;
+    }
+    .popup-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #1e293b;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .popup-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .popup-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #64748b;
+      transition: all 0.15s ease;
+    }
+    .popup-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+    .popup-close-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+    .popup-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: auto;
+      background: #ffffff;
+    }
+    .popup-resize-corner {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      width: 14px;
+      height: 14px;
+      pointer-events: none;
+      border-right: 2.5px solid #94a3b8;
+      border-bottom: 2.5px solid #94a3b8;
+      border-radius: 0 0 3px 0;
+      opacity: 0.6;
+    }
+
+    /* Unified Modern Table Design (Nearest Neighbors & Elements Table) */
+    .knn-modern-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.78rem;
+      text-align: left;
+    }
+    .knn-modern-table th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      padding: 8px 10px;
+      font-weight: 600;
+      font-size: 0.73rem;
+      color: #475569;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+      z-index: 5;
+    }
+    .knn-modern-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+      white-space: nowrap;
+    }
+    .knn-modern-table tr {
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+    .knn-modern-table tr:hover {
+      background: #f8fafc;
+    }
+    .knn-modern-table tr.highlighted {
+      background: #eff6ff !important;
+      font-weight: 600;
+    }
+    .knn-modern-table tr.top-k-row {
+      background: #fffdf5;
+    }
+    .knn-modern-table tr.selected-row {
+      background: #e0f2fe !important;
+      font-weight: 600;
+      border-left: 3px solid #0284c7;
+    }
+    .feat-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .dist-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #2563eb;
+    }
+    .badge-rank {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #fef3c7;
+      color: #d97706;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    .class-chip-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.73rem;
+      font-weight: 600;
+    }
+    .class-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    /* Nearest Neighbors Table */
+    .nb-table-wrapper {
+      max-height: 160px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .nb-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+      text-align: left;
+    }
+
+    .nb-table th {
+      position: sticky;
+      top: 0;
+      background: #f1f5f9;
+      padding: 5px 8px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nb-table td {
+      padding: 4px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      font-family: var(--font-mono);
+    }
+
+    .nb-table tr {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .nb-table tr:hover {
+      background: #f8fafc;
+    }
+    .nb-table tr.highlighted {
+      background: #eff6ff !important;
+      font-weight: bold;
+    }
+
+    /* Elements Table & Class Inspection */
+    .elem-expand-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .elem-expand-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+      border-color: #cbd5e1;
+    }
+
+    .elem-filter-tabs {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding-bottom: 3px;
+      scrollbar-width: thin;
+    }
+    .elem-filter-tabs::-webkit-scrollbar {
+      height: 3px;
+    }
+    .elem-filter-tabs::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .elem-tab-btn {
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.12s;
+    }
+    .elem-tab-btn:hover {
+      background: #f8fafc;
+      color: var(--text-main);
+    }
+    .elem-tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .elem-toolbar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .elem-search {
+      flex: 1;
+      min-width: 0;
+      padding: 4px 8px;
+      font-size: 0.74rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #ffffff;
+      color: var(--text-main);
+      outline: none;
+    }
+    .elem-search:focus {
+      border-color: var(--primary);
+    }
+    .elem-sort {
+      padding: 4px 6px;
+      font-size: 0.72rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #ffffff;
+      color: var(--text-main);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .elem-table-wrapper {
+      max-height: 210px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+    }
+    .elem-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.74rem;
+      text-align: left;
+    }
+    .elem-table th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      padding: 5px 6px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      z-index: 2;
+    }
+    .elem-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #f1f5f9;
+      font-family: var(--font-mono);
+      vertical-align: middle;
+    }
+    .elem-table tr:hover {
+      background: #f8fafc;
+    }
+    .elem-table tr.highlighted {
+      background: #eff6ff !important;
+      font-weight: bold;
+    }
+    .elem-table tr.selected-row,
+    .nb-table tr.selected-row,
+    .modal-table tr.selected-row {
+      background: #e0f2fe !important;
+      font-weight: bold;
+      border-left: 3px solid #0284c7;
+    }
+    .elem-table tr.top-k-row {
+      background: #fffbeb;
+    }
+
+    .elem-tag-pill {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+    .top-k-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .elem-btn-action {
+      padding: 1px 4px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: #ffffff;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.68rem;
+      transition: all 0.1s;
+    }
+    .elem-btn-action:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+    .elem-btn-action.btn-del:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
+    }
+
+    /* Fullscreen Elements Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-window {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 980px;
+      max-width: 96vw;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalPop 0.18s ease-out;
+    }
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .modal-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.12s;
+    }
+    .modal-close-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+    .modal-toolbar {
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .modal-table-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+    .modal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .modal-table th {
+      position: sticky;
+      top: 0;
+      background: #f1f5f9;
+      padding: 8px 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      z-index: 2;
+    }
+    .modal-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-family: var(--font-mono);
+      vertical-align: middle;
+    }
+    .modal-table tr:hover {
+      background: #f8fafc;
+    }
+    .modal-table tr.top-k-row {
+      background: #fffbeb;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-stats {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .modal-btn-primary {
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.12s;
+    }
+    .modal-btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    /* Viewport Area */
+    .viewport {
+      flex: 1;
+      position: relative;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    #cv2d {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Desmos Floating Controls (Bottom Right) */
+    .desmos-ctrls {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 25;
+    }
+
+    .zoom-btns-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 40px;
+    }
+
+    .desmos-bottom-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .ctrl-btn {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #334155;
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+
+    .ctrl-btn:hover {
+      background: #f8fafc;
+      color: #0f172a;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .ctrl-btn:active {
+      transform: scale(0.94);
+    }
+
+    .zoom-btn {
+      width: 40px !important;
+      height: 36px !important;
+      min-width: 40px !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 1.25rem !important;
+      line-height: 1 !important;
+      font-weight: 500;
+      text-align: center !important;
+    }
+
+    .btn-home-btn {
+      width: 40px !important;
+      height: 36px !important;
+      min-width: 40px !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 0.78rem !important;
+      font-weight: 600 !important;
+      text-align: center !important;
+    }
+
+    /* Floating Tooltip (Fixed viewport positioning relative to cursor) */
+    .tooltip {
+      position: fixed;
+      display: none;
+      background: rgba(15, 23, 42, 0.92);
+      color: #ffffff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      pointer-events: none;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+    }
+
+    /* Bottom-Left Mouse Coordinates Badge */
+    .coord-badge {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border);
+      height: 36px;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      user-select: none;
+      z-index: 20;
+    }
+
+    .bottom-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      height: 36px;
+      box-sizing: border-box;
+      padding: 0 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #334155;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .bottom-pill-btn:hover {
+      background: #f8fafc;
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+    .bottom-pill-btn.active {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1d4ed8;
+    }
+    .bottom-pill-btn .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .bottom-pill-btn .pill-badge {
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      top: 64px;
+      right: 20px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 200;
+      transform: translateY(-20px);
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 800px) {
+      .workspace {
+        flex-direction: column-reverse;
+      }
+      .sidebar {
+        width: 100%;
+        height: 40vh;
+        border-right: none;
+        border-top: 1px solid var(--border);
+      }
+    }
+  
+    
+    /* Pseudocode Stepper Card in Sidebar */
+    .pseudo-step-badge {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .pseudo-code-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      margin-top: 6px;
+    }
+    .pseudo-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      color: #64748b;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: #ffffff;
+    }
+    .pseudo-line:hover {
+      background: #f1f5f9;
+    }
+    .pseudo-line.active {
+      background: #eff6ff;
+      border-left: 3px solid #2563eb;
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+    .pseudo-line.done {
+      color: #334155;
+    }
+    .pseudo-line-icon {
+      width: 16px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #2563eb;
+      flex-shrink: 0;
+    }
+    .pseudo-line.active .pseudo-line-icon {
+      color: #2563eb;
+      font-weight: 800;
+    }
+    .pseudo-line.done .pseudo-line-icon {
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .pseudo-line-text {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pseudo-explainer {
+      margin-top: 6px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      color: #334155;
+      line-height: 1.4;
+    }
+    .pseudo-explainer b {
+      color: #2563eb;
+    }
+
+    /* ==========================================================
+       PSEUDOCODE ALGORITHMIC EXECUTION TABLE POPUP & SUBTABLES
+       ========================================================== */
+    .pseudo-exec-popup {
+      min-width: 380px;
+      min-height: 240px;
+      box-shadow: 0 14px 34px -4px rgba(15, 23, 42, 0.2), 0 6px 14px -2px rgba(15, 23, 42, 0.1);
+    }
+    .pseudo-panel-subbar {
+      padding: 6px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.77rem;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      user-select: none;
+    }
+    .pseudo-panel-subbar b {
+      color: #0f172a;
+    }
+    .pseudo-subbar-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #334155;
+    }
+    .pseudo-step-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .pseudo-split-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pseudo-subtable-block {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .pseudo-subtable-title {
+      padding: 6px 10px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pseudo-row-item {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .pseudo-row-item:hover,
+    .pseudo-row-item.highlighted {
+      background: #eff6ff !important;
+    }
+    .badge-rank {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .badge-rank.rank-1 {
+      background: #fef3c7;
+      color: #b45309;
+    }
+    .badge-rank.rank-2 {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .badge-rank.rank-3 {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .status-badge.winner {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .status-badge.loser {
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+    .pseudo-vote-count {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: inline-block;
+      transition: transform 0.15s ease, color 0.15s ease;
+    }
+    .pseudo-vote-count.bump {
+      transform: scale(1.35);
+      color: #2563eb;
+    }
+    .pseudo-winner-card {
+      animation: tally-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes tally-pop {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .tally-winner-banner {
+      margin-top: 4px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Header Toolbar -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">kNN</div>
+      <span>k-NN Grapher</span>
+      <span class="brand-sub">Nhóm 5</span>
+    </div>
+
+    <!-- Actions & Presets -->
+    <div class="header-actions">
+      <div class="preset-select-wrapper">
+        <select class="preset-select" id="preset-select" title="Chọn bộ dữ liệu mẫu">
+          <optgroup label="Phân lớp (Classification)">
+            <option value="moons">Two Moons</option>
+            <option value="blobs">Gaussian Blobs</option>
+            <option value="circles">Concentric Circles</option>
+            <option value="pass_fail">Student Performance (Pass/Fail)</option>
+            <option value="real_estate">Real Estate (Area vs Price)</option>
+            <option value="iris">Iris Dataset (Fisher, 1936)</option>
+            <option value="empty">Custom Dataset (Blank Canvas)</option>
+          </optgroup>
+          <optgroup label="Hồi quy (Regression)">
+            <option value="reg_house">Dự đoán Giá nhà (Area & Dist → Price)</option>
+            <option value="reg_sine">Hàm phi tuyến Sóng Sin (Nonlinear Curve)</option>
+            <option value="reg_auto">Tiêu hao Nhiên liệu xe (HP & Weight → MPG)</option>
+          </optgroup>
+        </select>
+        <span class="select-arrow"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+    <!-- Viewport (Full Screen Canvas) -->
+    <main class="viewport" id="viewport">
+      <!-- 2D Canvas -->
+      <canvas id="cv2d"></canvas>
+
+      <!-- Floating Box 0: Prediction Result & Point Z (Collapsed on start) -->
+      <div class="floating-popup collapsed" id="popup-prediction" style="top: 16px; left: 16px; width: 310px; height: auto;">
+        <div class="popup-header" id="popup-prediction-header">
+          <div class="popup-title">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2563eb;"></span>
+            <span>Điểm Z & Kết quả dự đoán</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-prediction" title="Thu gọn / Mở rộng bảng">+</button>
+          </div>
+        </div>
+        <div class="popup-body" id="popup-prediction-body" style="padding: 12px 14px; overflow: visible;">
+          <!-- Coordinates readout/inputs -->
+          <div class="coords-grid" id="z-coords-container" style="margin-bottom: 10px;">
+            <div class="coord-item">
+              <span class="coord-label">X:</span>
+              <input type="number" step="0.1" class="coord-input" id="zx-input" value="0.0">
+            </div>
+            <div class="coord-item">
+              <span class="coord-label">Y:</span>
+              <input type="number" step="0.1" class="coord-input" id="zy-input" value="0.0">
+            </div>
+          </div>
+
+          <!-- Prediction Banner -->
+          <div class="pred-badge-container" style="margin-bottom: 10px;">
+            <span class="pred-title">DỰ ĐOÁN:</span>
+            <span class="pred-badge" id="pred-badge">--</span>
+          </div>
+
+          <!-- Votes distribution -->
+          <div class="votes-bars" id="votes-bars">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box 1: Tools & Class Palette -->
+      <div class="floating-popup" id="popup-tools" style="top: 16px; left: 325px; width: 310px; height: auto; display: none;">
+        <div class="popup-header" id="popup-tools-header">
+          <div class="popup-title">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#8b5cf6;"></span>
+            <span>Công cụ & Lớp dữ liệu</span>
+            <span class="badge" id="points-total-badge" style="background:#f1f5f9; color:#475569; font-weight:normal;">0 điểm</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-tools" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-tools" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <div class="popup-body" id="popup-tools-body" style="padding: 10px 12px; overflow: visible; display: flex; flex-direction: column; gap: 8px;">
+          <div class="tool-group">
+            <button class="tool-btn active" id="tool-move" title="Nhấp hoặc kéo để di chuyển điểm truy vấn Z (Phím Z)">
+              <span>Di chuyển Z</span>
+            </button>
+            <button class="tool-btn" id="tool-add" title="Nhấp chuột lên đồ thị để đặt điểm mới (Phím A)">
+              <span>Thêm điểm</span>
+            </button>
+          </div>
+
+          <div style="font-size: 0.8rem; font-weight:600; color:var(--text-muted); margin-top:2px;">
+            Chọn lớp khi thêm điểm:
+          </div>
+          <div class="class-palette" id="class-palette">
+            <!-- Class chips injected by JS -->
+          </div>
+
+          <!-- Card Axes Mapping (for multi-dimensional data like Iris) -->
+          <div id="card-axes" style="display:none; margin-top:4px; padding-top:6px; border-top:1px dashed #e2e8f0;">
+            <div style="font-size: 0.8rem; font-weight:700; color:#1e293b; margin-bottom:4px;">
+              Chọn trục hiển thị:
+            </div>
+            <div class="form-group" style="margin-bottom:6px;">
+              <label class="form-label" style="font-size:0.75rem;">Trục X:</label>
+              <select class="form-select" id="axis-x-select" style="font-size:0.75rem; padding:3px 6px;"></select>
+            </div>
+            <div class="form-group" style="margin-bottom:2px;">
+              <label class="form-label" style="font-size:0.75rem;">Trục Y:</label>
+              <select class="form-select" id="axis-y-select" style="font-size:0.75rem; padding:3px 6px;"></select>
+            </div>
+          </div>
+
+
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box 2: k-NN Parameters (Open on start, left edge) -->
+      <div class="floating-popup" id="popup-params" style="top: 62px; left: 16px; width: 295px; height: auto;">
+        <div class="popup-header" id="popup-params-header">
+          <div class="popup-title">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
+            <span>Tham số k-NN</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-params" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-params" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <div class="popup-body" id="popup-params-body" style="padding: 10px 12px; overflow: visible; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Task Mode (Classification vs Regression) -->
+          <div class="param-row">
+            <div class="param-header">
+              <span>Bài toán</span>
+            </div>
+            <div class="task-mode-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:4px;">
+              <button class="metric-btn active" id="task-btn-cls" onclick="setTaskMode('classification')">Phân lớp</button>
+              <button class="metric-btn" id="task-btn-reg" onclick="setTaskMode('regression')">Hồi quy</button>
+            </div>
+          </div>
+
+          <!-- k slider -->
+          <div class="param-row">
+            <div class="param-header">
+              <span>Số láng giềng k</span>
+              <span class="param-val" id="k-val">k = 5</span>
+            </div>
+            <div class="slider-control">
+              <button class="slider-btn" id="k-dec">−</button>
+              <input type="range" id="k-slider" min="1" max="50" value="5" step="1">
+              <button class="slider-btn" id="k-inc">+</button>
+            </div>
+          </div>
+
+          <!-- Metric -->
+          <div class="param-row" style="margin-top:2px;">
+            <div class="param-header">
+              <span>Hàm khoảng cách</span>
+            </div>
+            <div class="metric-grid" id="metric-grid">
+              <button class="metric-btn active" data-metric="euclid">Euclid (L₂)</button>
+              <button class="metric-btn" data-metric="manhattan">Manhattan (L₁)</button>
+              <button class="metric-btn" data-metric="chebyshev">Chebyshev (L∞)</button>
+              <button class="metric-btn" data-metric="cosine">Cosine</button>
+            </div>
+          </div>
+
+          <!-- Weighting -->
+          <div class="toggle-row" style="margin-top:2px;">
+            <span>Trọng số khoảng cách (1/d)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-weights">
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <!-- Normalization -->
+          <div class="toggle-row">
+            <span>Chuẩn hóa Min-Max</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-norm">
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <!-- Decision Regions -->
+          <div class="toggle-row">
+            <span>Tô vùng quyết định (2D)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-regions" checked>
+              <span class="slider-round"></span>
+            </label>
+          </div>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box 3: Pseudocode Simulation Runner -->
+      <div class="floating-popup" id="popup-pseudocode-runner" style="top: 16px; right: 20px; width: 395px; height: auto;">
+        <div class="popup-header" id="popup-pseudocode-runner-header" style="white-space: nowrap;">
+          <div class="popup-title">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#06b6d4; flex-shrink:0;"></span>
+            <span style="flex-shrink:0;">Pseudo Code</span>
+            <span class="pseudo-step-badge" id="pseudo-step-badge">Ready</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-pseudocode-runner" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-pseudocode-runner" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <div class="popup-body" id="popup-pseudocode-runner-body" style="padding: 10px 12px; overflow: visible; display: flex; flex-direction: column; gap: 6px;">
+          <!-- Controls Toolbar -->
+          <div style="display:flex; gap:6px; margin: 2px 0 4px 0; align-items:center;">
+            <button class="tool-btn active" id="btn-pseudo-play" style="flex:1.4; height:32px; justify-content:center; align-items:center; background:#2563eb; color:#ffffff; padding:0;" title="Chạy tự động (Phím Space)">
+              <span id="pseudo-play-icon" style="display:flex; align-items:center; justify-content:center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </button>
+            <button class="slider-btn" id="btn-pseudo-prev" title="Lùi lại bước trước" style="flex:1; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            </button>
+            <button class="slider-btn" id="btn-pseudo-next" title="Bước tiếp theo" style="flex:1; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+            <button class="slider-btn" id="btn-pseudo-reset" title="Đặt lại trạng thái" style="flex:1; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+            <button class="slider-btn" id="btn-pseudo-speed" title="Tốc độ diễn hoạt" style="width:38px; height:32px; font-size:0.75rem; font-weight:700; flex-shrink:0;">1x</button>
+          </div>
+
+          <!-- Pseudocode Lines List -->
+          <div class="pseudo-code-list" id="pseudo-code-list">
+            <!-- Injected dynamically -->
+          </div>
+
+          <!-- Explainer Text -->
+          <div class="pseudo-explainer" id="pseudo-explainer-text" style="display:none; margin-top:4px;"></div>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box 1: k Nearest Neighbors -->
+      <div class="floating-popup" id="popup-nearest" style="top: 16px; right: 430px; width: 440px; height: 280px; display: none;">
+        <div class="popup-header" id="popup-nearest-header">
+          <div class="popup-title">
+            <span>Các láng giềng gần nhất</span>
+            <span class="badge" id="popup-k-badge" style="background:#eff6ff; color:#2563eb;">k = 5</span>
+            <span class="badge" id="radius-badge" style="background:#f1f5f9; color:#64748b; font-family:var(--font-mono); font-size:0.73rem;">R = 0.00</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-nearest" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-nearest" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <div class="popup-body" id="popup-nearest-body">
+          <table class="knn-modern-table" id="nb-table">
+            <thead>
+              <tr id="nb-thead-tr">
+                <th style="width:40px;">#</th>
+                <th>Lớp</th>
+                <th id="nb-th-col1">Trường 1</th>
+                <th id="nb-th-col2">Trường 2</th>
+                <th style="width:85px;">d(Z)</th>
+              </tr>
+            </thead>
+            <tbody id="nb-tbody">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box 2: Elements Data -->
+      <div class="floating-popup" id="popup-elements" style="top: 310px; right: 430px; width: 480px; height: 320px; display: none;">
+        <div class="popup-header" id="popup-elements-header">
+          <div class="popup-title">
+            <span>Phần tử trong các lớp</span>
+            <span class="badge" id="elem-total-badge" style="background:#f1f5f9; color:#475569;">0 điểm</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-elements" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-elements" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <!-- Class Filter Tabs -->
+        <div class="elem-filter-tabs" id="elem-class-tabs" style="padding:6px 10px; background:#fafafa; border-bottom:1px solid #f1f5f9;"></div>
+        <!-- Search & Sort Row -->
+        <div class="elem-toolbar" style="padding:6px 10px; background:#fafafa; border-bottom:1px solid #e2e8f0; display:flex; gap:8px;">
+          <input type="text" id="elem-search-input" class="elem-search" placeholder="Lọc theo giá trị, nhãn..." style="flex:1;">
+          <select id="elem-sort-select" class="elem-sort">
+            <option value="id"># Thứ tự</option>
+            <option value="dist">d(Z) Gần → Xa</option>
+            <option value="class">Theo lớp</option>
+          </select>
+        </div>
+        <div class="popup-body" id="popup-elements-body">
+          <table class="knn-modern-table" id="elem-table">
+            <thead>
+              <tr id="elem-thead-tr">
+                <th style="width:40px;">#</th>
+                <th>Lớp</th>
+                <th id="elem-th-col1">Trường 1</th>
+                <th id="elem-th-col2">Trường 2</th>
+                <th style="width:85px;">d(Z)</th>
+              </tr>
+            </thead>
+            <tbody id="elem-tbody">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Floating Box: Vote Tally HUD (Step 4 Pseudocode) -->
+      <div class="floating-popup canvas-vote-tally" id="canvas-vote-tally" style="top: 310px; right: 20px; width: 395px; min-width: 340px; max-width: 420px; display: none; z-index: 130;">
+        <div class="popup-header" id="tally-header-title">
+          <div class="popup-title">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2563eb;"></span>
+            <span>Kết quả</span>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn popup-collapse-btn" id="btn-collapse-tally" title="Thu gọn / Mở rộng bảng">−</button>
+            <button class="popup-btn popup-close-btn" id="btn-close-tally" title="Đóng bảng">✕</button>
+          </div>
+        </div>
+        <div class="popup-body" id="tally-body" style="padding: 12px 14px; overflow: visible; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Tally summary subtitle -->
+          <div id="tally-subheader" style="font-size: 0.76rem; font-weight: 600; color: #64748b; display: flex; justify-content: space-between;">
+            <span>Lớp dữ liệu</span>
+            <span>Số phiếu (Tỷ lệ %)</span>
+          </div>
+
+          <!-- Tally rows container -->
+          <div class="tally-rows-container" id="tally-rows-container" style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- Injected by JS -->
+          </div>
+
+          <!-- Winner announcement banner (Fixed height so no jumping) -->
+          <div class="tally-winner-banner" id="tally-winner-banner" style="margin-top: 4px; min-height: 48px; display: flex; align-items: center; justify-content: center;">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+        <div class="popup-resize-corner"></div>
+      </div>
+
+      <!-- Desmos Floating Controls (Bottom Right) -->
+      <div class="desmos-ctrls">
+        <div class="zoom-btns-col">
+          <button class="ctrl-btn zoom-btn" id="btn-zoom-in" title="Phóng to (+)">+</button>
+          <button class="ctrl-btn zoom-btn" id="btn-zoom-out" title="Thu nhỏ (−)">−</button>
+        </div>
+        <div class="desmos-bottom-row">
+          <button class="bottom-pill-btn" id="pill-toggle-tools" title="Bật / Tắt Hộp Công cụ & Lớp">
+            <span class="pill-dot" style="background:#8b5cf6;"></span>
+            <span>Công cụ & Lớp</span>
+          </button>
+          <button class="bottom-pill-btn active" id="pill-toggle-params" title="Bật / Tắt Hộp Tham số k-NN">
+            <span class="pill-dot" style="background:#f59e0b;"></span>
+            <span>Tham số k-NN</span>
+          </button>
+          <button class="bottom-pill-btn active" id="pill-toggle-pseudocode" title="Bật / Tắt Hộp Pseudo Code">
+            <span class="pill-dot" style="background:#06b6d4;"></span>
+            <span>Pseudo Code</span>
+          </button>
+          <button class="bottom-pill-btn" id="pill-toggle-nearest" title="Bật / Tắt Bảng Các láng giềng gần nhất">
+            <span class="pill-dot" style="background:#2563eb;"></span>
+            <span id="pill-k-text">Số láng giềng K = 5</span>
+          </button>
+          <button class="bottom-pill-btn" id="pill-toggle-elements" title="Bật / Tắt Bảng Dữ liệu lớp">
+            <span class="pill-dot" style="background:#10b981;"></span>
+            <span>Dữ liệu lớp</span>
+            <span class="pill-badge" id="pill-total-pts">0</span>
+          </button>
+          <button class="ctrl-btn btn-home-btn" id="btn-home" title="Về gốc toạ độ">Gốc</button>
+        </div>
+      </div>
+
+      <!-- Bottom-Left Mouse Coordinates Badge -->
+      <div class="coord-badge" id="coord-badge">X: 0.00, Y: 0.00</div>
+    </main>
+  </div>
+</div>
+
+
+
+<!-- Fullscreen Elements Table Modal -->
+<div class="modal-backdrop" id="modal-elements-backdrop" style="display:none;">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <h3 class="modal-title">Danh sách phần tử & thông tin chi tiết các lớp</h3>
+        <span class="modal-subtitle" id="modal-elem-subtitle">0 phần tử</span>
+      </div>
+      <button class="modal-close-btn" id="btn-close-modal" title="Đóng" style="font-size:0.8rem; font-weight:600; width:auto; padding:0 10px;">Đóng</button>
+    </div>
+
+    <!-- Filter & Search Bar in Modal -->
+    <div class="modal-toolbar">
+      <div class="elem-filter-tabs" id="modal-class-tabs"></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="modal-search-input" class="elem-search" placeholder="Tìm kiếm nhanh..." style="width:200px;">
+        <select id="modal-sort-select" class="elem-sort">
+          <option value="id"># Mặc định</option>
+          <option value="dist">d(Z) Gần → Xa</option>
+          <option value="class">Theo lớp</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Wide Full Table -->
+    <div class="modal-table-wrapper">
+      <table class="modal-table" id="modal-elem-table">
+        <thead id="modal-elem-thead"></thead>
+        <tbody id="modal-elem-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-stats" id="modal-stats-summary"></div>
+      <button class="modal-btn-primary" id="btn-close-modal-footer">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/**
+ * k-NN Grapher - Desmos Style Interactive Simulator
+ * Group 5 - SE313.R11
+ */
+
+// Embedded Iris dataset
+const IRIS_RAW = [[5.1, 3.5, 1.4, 0.2, "Iris-setosa"], [4.9, 3.0, 1.4, 0.2, "Iris-setosa"], [4.7, 3.2, 1.3, 0.2, "Iris-setosa"], [4.6, 3.1, 1.5, 0.2, "Iris-setosa"], [5.0, 3.6, 1.4, 0.2, "Iris-setosa"], [5.4, 3.9, 1.7, 0.4, "Iris-setosa"], [4.6, 3.4, 1.4, 0.3, "Iris-setosa"], [5.0, 3.4, 1.5, 0.2, "Iris-setosa"], [4.4, 2.9, 1.4, 0.2, "Iris-setosa"], [4.9, 3.1, 1.5, 0.1, "Iris-setosa"], [5.4, 3.7, 1.5, 0.2, "Iris-setosa"], [4.8, 3.4, 1.6, 0.2, "Iris-setosa"], [4.8, 3.0, 1.4, 0.1, "Iris-setosa"], [4.3, 3.0, 1.1, 0.1, "Iris-setosa"], [5.8, 4.0, 1.2, 0.2, "Iris-setosa"], [5.7, 4.4, 1.5, 0.4, "Iris-setosa"], [5.4, 3.9, 1.3, 0.4, "Iris-setosa"], [5.1, 3.5, 1.4, 0.3, "Iris-setosa"], [5.7, 3.8, 1.7, 0.3, "Iris-setosa"], [5.1, 3.8, 1.5, 0.3, "Iris-setosa"], [5.4, 3.4, 1.7, 0.2, "Iris-setosa"], [5.1, 3.7, 1.5, 0.4, "Iris-setosa"], [4.6, 3.6, 1.0, 0.2, "Iris-setosa"], [5.1, 3.3, 1.7, 0.5, "Iris-setosa"], [4.8, 3.4, 1.9, 0.2, "Iris-setosa"], [5.0, 3.0, 1.6, 0.2, "Iris-setosa"], [5.0, 3.4, 1.6, 0.4, "Iris-setosa"], [5.2, 3.5, 1.5, 0.2, "Iris-setosa"], [5.2, 3.4, 1.4, 0.2, "Iris-setosa"], [4.7, 3.2, 1.6, 0.2, "Iris-setosa"], [4.8, 3.1, 1.6, 0.2, "Iris-setosa"], [5.4, 3.4, 1.5, 0.4, "Iris-setosa"], [5.2, 4.1, 1.5, 0.1, "Iris-setosa"], [5.5, 4.2, 1.4, 0.2, "Iris-setosa"], [4.9, 3.1, 1.5, 0.1, "Iris-setosa"], [5.0, 3.2, 1.2, 0.2, "Iris-setosa"], [5.5, 3.5, 1.3, 0.2, "Iris-setosa"], [4.9, 3.1, 1.5, 0.1, "Iris-setosa"], [4.4, 3.0, 1.3, 0.2, "Iris-setosa"], [5.1, 3.4, 1.5, 0.2, "Iris-setosa"], [5.0, 3.5, 1.3, 0.3, "Iris-setosa"], [4.5, 2.3, 1.3, 0.3, "Iris-setosa"], [4.4, 3.2, 1.3, 0.2, "Iris-setosa"], [5.0, 3.5, 1.6, 0.6, "Iris-setosa"], [5.1, 3.8, 1.9, 0.4, "Iris-setosa"], [4.8, 3.0, 1.4, 0.3, "Iris-setosa"], [5.1, 3.8, 1.6, 0.2, "Iris-setosa"], [4.6, 3.2, 1.4, 0.2, "Iris-setosa"], [5.3, 3.7, 1.5, 0.2, "Iris-setosa"], [5.0, 3.3, 1.4, 0.2, "Iris-setosa"], [7.0, 3.2, 4.7, 1.4, "Iris-versicolor"], [6.4, 3.2, 4.5, 1.5, "Iris-versicolor"], [6.9, 3.1, 4.9, 1.5, "Iris-versicolor"], [5.5, 2.3, 4.0, 1.3, "Iris-versicolor"], [6.5, 2.8, 4.6, 1.5, "Iris-versicolor"], [5.7, 2.8, 4.5, 1.3, "Iris-versicolor"], [6.3, 3.3, 4.7, 1.6, "Iris-versicolor"], [4.9, 2.4, 3.3, 1.0, "Iris-versicolor"], [6.6, 2.9, 4.6, 1.3, "Iris-versicolor"], [5.2, 2.7, 3.9, 1.4, "Iris-versicolor"], [5.0, 2.0, 3.5, 1.0, "Iris-versicolor"], [5.9, 3.0, 4.2, 1.5, "Iris-versicolor"], [6.0, 2.2, 4.0, 1.0, "Iris-versicolor"], [6.1, 2.9, 4.7, 1.4, "Iris-versicolor"], [5.6, 2.9, 3.6, 1.3, "Iris-versicolor"], [6.7, 3.1, 4.4, 1.4, "Iris-versicolor"], [5.6, 3.0, 4.5, 1.5, "Iris-versicolor"], [5.8, 2.7, 4.1, 1.0, "Iris-versicolor"], [6.2, 2.2, 4.5, 1.5, "Iris-versicolor"], [5.6, 2.5, 3.9, 1.1, "Iris-versicolor"], [5.9, 3.2, 4.8, 1.8, "Iris-versicolor"], [6.1, 2.8, 4.0, 1.3, "Iris-versicolor"], [6.3, 2.5, 4.9, 1.5, "Iris-versicolor"], [6.1, 2.8, 4.7, 1.2, "Iris-versicolor"], [6.4, 2.9, 4.3, 1.3, "Iris-versicolor"], [6.6, 3.0, 4.4, 1.4, "Iris-versicolor"], [6.8, 2.8, 4.8, 1.4, "Iris-versicolor"], [6.7, 3.0, 5.0, 1.7, "Iris-versicolor"], [6.0, 2.9, 4.5, 1.5, "Iris-versicolor"], [5.7, 2.6, 3.5, 1.0, "Iris-versicolor"], [5.5, 2.4, 3.8, 1.1, "Iris-versicolor"], [5.5, 2.4, 3.7, 1.0, "Iris-versicolor"], [5.8, 2.7, 3.9, 1.2, "Iris-versicolor"], [6.0, 2.7, 5.1, 1.6, "Iris-versicolor"], [5.4, 3.0, 4.5, 1.5, "Iris-versicolor"], [6.0, 3.4, 4.5, 1.6, "Iris-versicolor"], [6.7, 3.1, 4.7, 1.5, "Iris-versicolor"], [6.3, 2.3, 4.4, 1.3, "Iris-versicolor"], [5.6, 3.0, 4.1, 1.3, "Iris-versicolor"], [5.5, 2.5, 4.0, 1.3, "Iris-versicolor"], [5.5, 2.6, 4.4, 1.2, "Iris-versicolor"], [6.1, 3.0, 4.6, 1.4, "Iris-versicolor"], [5.8, 2.6, 4.0, 1.2, "Iris-versicolor"], [5.0, 2.3, 3.3, 1.0, "Iris-versicolor"], [5.6, 2.7, 4.2, 1.3, "Iris-versicolor"], [5.7, 3.0, 4.2, 1.2, "Iris-versicolor"], [5.7, 2.9, 4.2, 1.3, "Iris-versicolor"], [6.2, 2.9, 4.3, 1.3, "Iris-versicolor"], [5.1, 2.5, 3.0, 1.1, "Iris-versicolor"], [5.7, 2.8, 4.1, 1.3, "Iris-versicolor"], [6.3, 3.3, 6.0, 2.5, "Iris-virginica"], [5.8, 2.7, 5.1, 1.9, "Iris-virginica"], [7.1, 3.0, 5.9, 2.1, "Iris-virginica"], [6.3, 2.9, 5.6, 1.8, "Iris-virginica"], [6.5, 3.0, 5.8, 2.2, "Iris-virginica"], [7.6, 3.0, 6.6, 2.1, "Iris-virginica"], [4.9, 2.5, 4.5, 1.7, "Iris-virginica"], [7.3, 2.9, 6.3, 1.8, "Iris-virginica"], [6.7, 2.5, 5.8, 1.8, "Iris-virginica"], [7.2, 3.6, 6.1, 2.5, "Iris-virginica"], [6.5, 3.2, 5.1, 2.0, "Iris-virginica"], [6.4, 2.7, 5.3, 1.9, "Iris-virginica"], [6.8, 3.0, 5.5, 2.1, "Iris-virginica"], [5.7, 2.5, 5.0, 2.0, "Iris-virginica"], [5.8, 2.8, 5.1, 2.4, "Iris-virginica"], [6.4, 3.2, 5.3, 2.3, "Iris-virginica"], [6.5, 3.0, 5.5, 1.8, "Iris-virginica"], [7.7, 3.8, 6.7, 2.2, "Iris-virginica"], [7.7, 2.6, 6.9, 2.3, "Iris-virginica"], [6.0, 2.2, 5.0, 1.5, "Iris-virginica"], [6.9, 3.2, 5.7, 2.3, "Iris-virginica"], [5.6, 2.8, 4.9, 2.0, "Iris-virginica"], [7.7, 2.8, 6.7, 2.0, "Iris-virginica"], [6.3, 2.7, 4.9, 1.8, "Iris-virginica"], [6.7, 3.3, 5.7, 2.1, "Iris-virginica"], [7.2, 3.2, 6.0, 1.8, "Iris-virginica"], [6.2, 2.8, 4.8, 1.8, "Iris-virginica"], [6.1, 3.0, 4.9, 1.8, "Iris-virginica"], [6.4, 2.8, 5.6, 2.1, "Iris-virginica"], [7.2, 3.0, 5.8, 1.6, "Iris-virginica"], [7.4, 2.8, 6.1, 1.9, "Iris-virginica"], [7.9, 3.8, 6.4, 2.0, "Iris-virginica"], [6.4, 2.8, 5.6, 2.2, "Iris-virginica"], [6.3, 2.8, 5.1, 1.5, "Iris-virginica"], [6.1, 2.6, 5.6, 1.4, "Iris-virginica"], [7.7, 3.0, 6.1, 2.3, "Iris-virginica"], [6.3, 3.4, 5.6, 2.4, "Iris-virginica"], [6.4, 3.1, 5.5, 1.8, "Iris-virginica"], [6.0, 3.0, 4.8, 1.8, "Iris-virginica"], [6.9, 3.1, 5.4, 2.1, "Iris-virginica"], [6.7, 3.1, 5.6, 2.4, "Iris-virginica"], [6.9, 3.1, 5.1, 2.3, "Iris-virginica"], [5.8, 2.7, 5.1, 1.9, "Iris-virginica"], [6.8, 3.2, 5.9, 2.3, "Iris-virginica"], [6.7, 3.3, 5.7, 2.5, "Iris-virginica"], [6.7, 3.0, 5.2, 2.3, "Iris-virginica"], [6.3, 2.5, 5.0, 1.9, "Iris-virginica"], [6.5, 3.0, 5.2, 2.0, "Iris-virginica"], [6.2, 3.4, 5.4, 2.3, "Iris-virginica"], [5.9, 3.0, 5.1, 1.8, "Iris-virginica"]];
+const IRIS_FEATURES = ['dài đài hoa', 'rộng đài hoa', 'dài cánh hoa', 'rộng cánh hoa'];
+
+// Vibrant Palette
+const COLOR_PALETTE = [
+  '#2563eb', // Class 0: Blue
+  '#ef4444', // Class 1: Red
+  '#10b981', // Class 2: Green
+  '#a855f7', // Class 3: Purple
+  '#f97316', // Class 4: Orange
+  '#06b6d4', // Class 5: Cyan
+  '#ec4899', // Class 6: Pink
+  '#eab308'  // Class 7: Yellow
+];
+
+// Application State
+const STATE = {
+  mode: '2d', // '2d' or '3d'
+  task: 'classification', // 'classification' or 'regression'
+  tool: 'move', // 'move' or 'add'
+  activeClass: 0,
+  classes: [
+    { id: 0, name: 'Lớp 0', color: COLOR_PALETTE[0] },
+    { id: 1, name: 'Lớp 1', color: COLOR_PALETTE[1] }
+  ],
+  data: [], // Array of { id, x, y, z, c, raw?: [] }
+  z: { x: 0.5, y: 0.5, z: 0.0 },
+  k: 5,
+  metric: 'euclid', // 'euclid', 'manhattan', 'chebyshev', 'cosine'
+  weighting: false, // false = uniform, true = 1/d
+  norm: false,
+  showRegions: true,
+  axes: { x: 0, y: 1, z: 2, label: 4 },
+  columnNames: ['X', 'Y', 'Z'],
+  isMultiDim: false,
+  scale2D: 60, // pixels per unit
+  origin2D: { x: 0, y: 0 }
+};
+
+
+    // ==========================================================
+  // PSEUDOCODE STEP-BY-STEP VISUALIZATION ENGINE (CLEAN & EMBEDDED IN SIDEBAR)
+  // ==========================================================
+
+  function easeOutCubic(x) {
+    return 1 - Math.pow(1 - x, 3);
+  }
+  function easeOutQuad(x) {
+    return 1 - (1 - x) * (1 - x);
+  }
+
+  const PSEUDO_STATE = {
+    isPlaying: false,
+    currentStep: 0, // 0: idle/ready, 1..4: steps
+    speed: 1.0,
+    stepTimer: null,
+
+    // Step 2: Distance measuring animation (0.0 -> 1.0)
+    measuringProgress: 0.0,
+
+    // Step 3: Neighbor selection & boundary trace & exterior fade
+    colorTransitionProgress: 0.0,
+    enclosingProgress: 0.0,
+    exteriorOpacity: 1.0,
+
+    // Step 4: Voting orbs from neighbors to Z & impact ripples
+    votingOrbs: [],
+    impactRipples: [],
+    tallyCounts: {},
+    winnerAnnounced: false
+  };
+
+  const PSEUDO_STEPS = [
+    {
+      step: 1,
+      title: 'Initialize',
+      code: 'Initialize',
+      desc: 'Khởi tạo điểm truy vấn Z và tham số k láng giềng.'
+    },
+    {
+      step: 2,
+      title: 'Measure',
+      code: 'Measure',
+      desc: 'Đo khoảng cách từ Z tới tất cả các điểm dữ liệu.'
+    },
+    {
+      step: 3,
+      title: 'Select',
+      code: 'Select',
+      desc: 'Chọn k láng giềng gần nhất và vẽ đường bao quanh lân cận.'
+    },
+    {
+      step: 4,
+      title: 'Vote',
+      code: 'Vote',
+      desc: ''
+    }
+  ];
+
+  // Stepper Controller
+  function togglePlayPausePseudocode() {
+    if (PSEUDO_STATE.isPlaying) {
+      pausePseudocode();
+    } else {
+      playPseudocode();
+    }
+  }
+
+  function playPseudocode() {
+    if (PSEUDO_STATE.currentStep === 0 || PSEUDO_STATE.currentStep >= PSEUDO_STEPS.length) {
+      setPseudocodeStep(1);
+    }
+    PSEUDO_STATE.isPlaying = true;
+    updatePlayPauseButton();
+    scheduleNextAutoStep();
+  }
+
+  function pausePseudocode() {
+    PSEUDO_STATE.isPlaying = false;
+    if (PSEUDO_STATE.stepTimer) {
+      clearTimeout(PSEUDO_STATE.stepTimer);
+      PSEUDO_STATE.stepTimer = null;
+    }
+    updatePlayPauseButton();
+  }
+
+  function updatePlayPauseButton() {
+    const iconContainer = document.getElementById('pseudo-play-icon') || document.getElementById('pseudo-play-text');
+    const btn = document.getElementById('btn-pseudo-play');
+    if (!btn) return;
+    if (PSEUDO_STATE.isPlaying) {
+      btn.title = 'Tạm dừng (Phím Space)';
+      btn.style.background = '#f59e0b';
+      if (iconContainer) {
+        iconContainer.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+      }
+    } else {
+      btn.title = 'Chạy tự động (Phím Space)';
+      btn.style.background = '#2563eb';
+      if (iconContainer) {
+        iconContainer.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      }
+    }
+  }
+
+  function scheduleNextAutoStep() {
+    if (!PSEUDO_STATE.isPlaying) return;
+    if (PSEUDO_STATE.stepTimer) clearTimeout(PSEUDO_STATE.stepTimer);
+
+    // Durations for each step (in ms, scaled by speed): 0: idle, 1: init, 2: measure, 3: select & filter, 4: vote
+    const baseDurations = [0, 1300, 1800, 2600, 3200];
+    const duration = (baseDurations[PSEUDO_STATE.currentStep] || 1600) / PSEUDO_STATE.speed;
+
+    PSEUDO_STATE.stepTimer = setTimeout(() => {
+      if (!PSEUDO_STATE.isPlaying) return;
+      if (PSEUDO_STATE.currentStep < PSEUDO_STEPS.length) {
+        setPseudocodeStep(PSEUDO_STATE.currentStep + 1);
+        scheduleNextAutoStep();
+      } else {
+        pausePseudocode();
+      }
+    }, duration);
+  }
+
+  function stepPseudocode(delta) {
+    pausePseudocode();
+    let nextStep = PSEUDO_STATE.currentStep + delta;
+    if (nextStep < 1) nextStep = 1;
+    if (nextStep > PSEUDO_STEPS.length) nextStep = PSEUDO_STEPS.length;
+    setPseudocodeStep(nextStep);
+  }
+
+  function resetPseudocode() {
+    pausePseudocode();
+    PSEUDO_STATE.currentStep = 0;
+    PSEUDO_STATE.exteriorOpacity = 1.0;
+    PSEUDO_STATE.measuringProgress = 0.0;
+    PSEUDO_STATE.colorTransitionProgress = 0.0;
+    PSEUDO_STATE.enclosingProgress = 0.0;
+    PSEUDO_STATE.votingOrbs = [];
+    PSEUDO_STATE.impactRipples = [];
+    PSEUDO_STATE.winnerAnnounced = false;
+    const tally = $('canvas-vote-tally');
+    if (tally) tally.style.display = 'none';
+    updatePseudocodeUI();
+    requestDraw2D();
+  }
+
+  function setPseudocodeStep(stepIndex) {
+    PSEUDO_STATE.currentStep = stepIndex;
+    const pred = predictKNN([STATE.z.x, STATE.z.y]);
+    const tally = $('canvas-vote-tally');
+
+    if (stepIndex === 1) {
+      if (tally) tally.style.display = 'none';
+      PSEUDO_STATE.exteriorOpacity = 1.0;
+      PSEUDO_STATE.measuringProgress = 0.0;
+      PSEUDO_STATE.colorTransitionProgress = 0.0;
+      PSEUDO_STATE.enclosingProgress = 0.0;
+      PSEUDO_STATE.votingOrbs = [];
+      PSEUDO_STATE.impactRipples = [];
+      PSEUDO_STATE.winnerAnnounced = false;
+    } else if (stepIndex === 2) {
+      if (tally) tally.style.display = 'none';
+      PSEUDO_STATE.exteriorOpacity = 1.0;
+      PSEUDO_STATE.colorTransitionProgress = 0.0;
+      PSEUDO_STATE.enclosingProgress = 0.0;
+      PSEUDO_STATE.votingOrbs = [];
+      PSEUDO_STATE.impactRipples = [];
+      PSEUDO_STATE.winnerAnnounced = false;
+      animateDistanceMeasuring();
+    } else if (stepIndex === 3) {
+      if (tally) tally.style.display = 'none';
+      PSEUDO_STATE.measuringProgress = 1.0;
+      PSEUDO_STATE.votingOrbs = [];
+      PSEUDO_STATE.impactRipples = [];
+      PSEUDO_STATE.winnerAnnounced = false;
+      animateSelectNeighbors();
+    } else if (stepIndex === 4) {
+      PSEUDO_STATE.measuringProgress = 1.0;
+      PSEUDO_STATE.colorTransitionProgress = 1.0;
+      PSEUDO_STATE.enclosingProgress = 1.0;
+      PSEUDO_STATE.exteriorOpacity = 0.0;
+      animateVoteStep(pred);
+    }
+
+    updatePseudocodeUI();
+    requestDraw2D();
+  }
+
+  function animateDistanceMeasuring() {
+    const startTime = performance.now();
+    const duration = 1400 / PSEUDO_STATE.speed;
+    PSEUDO_STATE.measuringProgress = 0.0;
+    function sweep(now) {
+      if (PSEUDO_STATE.currentStep !== 2) return;
+      const progress = Math.min(1.0, (now - startTime) / duration);
+      PSEUDO_STATE.measuringProgress = progress;
+      requestDraw2D();
+      if (progress < 1.0) {
+        requestAnimationFrame(sweep);
+      } else {
+        PSEUDO_STATE.measuringProgress = 1.0;
+        requestDraw2D();
+      }
+    }
+    requestAnimationFrame(sweep);
+  }
+
+  function animateSelectNeighbors() {
+    const startTime = performance.now();
+    const duration = 2400 / PSEUDO_STATE.speed;
+    PSEUDO_STATE.colorTransitionProgress = 0.0;
+    PSEUDO_STATE.enclosingProgress = 0.0;
+    PSEUDO_STATE.exteriorOpacity = 1.0;
+
+    function frame(now) {
+      if (PSEUDO_STATE.currentStep !== 3) return;
+      const progress = Math.min(1.0, (now - startTime) / duration);
+
+      // Phase 1 (0.0 -> 0.30): Smooth color transition from blue to golden-amber
+      const colorP = Math.min(1.0, progress / 0.30);
+      PSEUDO_STATE.colorTransitionProgress = easeOutQuad(colorP);
+
+      // Phase 2 (0.22 -> 0.68): Enclosing boundary traces around k neighbors at radius R
+      const boundaryP = Math.min(1.0, Math.max(0, (progress - 0.22) / 0.46));
+      PSEUDO_STATE.enclosingProgress = easeOutCubic(boundaryP);
+
+      // Phase 3 (0.68 -> 1.0): ONLY AFTER boundary finishes tracing, exterior points fade out
+      if (progress < 0.68) {
+        PSEUDO_STATE.exteriorOpacity = 1.0;
+      } else {
+        const fadeP = Math.min(1.0, (progress - 0.68) / 0.32);
+        PSEUDO_STATE.exteriorOpacity = Math.max(0, 1.0 - easeOutCubic(fadeP));
+      }
+
+      requestDraw2D();
+      if (progress < 1.0 && PSEUDO_STATE.currentStep === 3) {
+        requestAnimationFrame(frame);
+      } else if (PSEUDO_STATE.currentStep === 3) {
+        PSEUDO_STATE.colorTransitionProgress = 1.0;
+        PSEUDO_STATE.enclosingProgress = 1.0;
+        PSEUDO_STATE.exteriorOpacity = 0.0;
+        requestDraw2D();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function animateVoteStep(pred) {
+    if (!pred) pred = predictKNN([STATE.z.x, STATE.z.y]);
+    PSEUDO_STATE.tallyCounts = {};
+    STATE.classes.forEach(c => { PSEUDO_STATE.tallyCounts[c.id] = 0; });
+    PSEUDO_STATE.impactRipples = [];
+    PSEUDO_STATE.winnerAnnounced = false;
+
+    showStaticVoteTally(pred);
+
+    const tally = $('canvas-vote-tally');
+    if (tally) {
+      tally.style.display = 'flex';
+      if (typeof bringPopupToFront === 'function') bringPopupToFront(tally);
+    }
+
+    if (STATE.task === 'classification') {
+      STATE.classes.forEach(c => {
+        const cntEl = document.getElementById(`tally-count-${c.id}`);
+        if (cntEl) cntEl.textContent = '0';
+        const pctEl = document.getElementById(`tally-pct-${c.id}`);
+        if (pctEl) pctEl.textContent = '(0%)';
+        const stEl = document.getElementById(`tally-status-${c.id}`);
+        if (stEl) stEl.style.display = 'none';
+      });
+      const winnerBanner = document.getElementById('tally-winner-banner');
+      if (winnerBanner) winnerBanner.style.display = 'none';
+    }
+
+    // Spawn vote orbs: from each neighbor point straight to Z!
+    const sz = toScreen2D(STATE.z.x, STATE.z.y);
+    const k = Math.max(1, pred.nearest.length);
+    const stagger = Math.max(120, Math.min(240, 1600 / k)) / PSEUDO_STATE.speed;
+    const orbDuration = 450 / PSEUDO_STATE.speed;
+    const startTime = performance.now();
+
+    PSEUDO_STATE.votingOrbs = pred.nearest.map((n, idx) => {
+      const sp = toScreen2D(n.point.x, n.point.y);
+      const val = (n.point.val !== undefined) ? n.point.val : n.point.y;
+      const col = (STATE.task === 'regression')
+        ? getColorForValue(val)
+        : (STATE.classes.find(c => c.id === n.point.c) || { color: '#64748b' }).color;
+      return {
+        classId: n.point.c,
+        val: val,
+        color: col,
+        startX: sp.x,
+        startY: sp.y,
+        targetX: sz.x,
+        targetY: sz.y,
+        spawnTime: startTime + idx * stagger,
+        duration: orbDuration,
+        progress: 0.0,
+        delivered: false
+      };
+    });
+
+    // Dedicated RAF animation loop for Step 4!
+    function voteLoop(now) {
+      if (PSEUDO_STATE.currentStep !== 4) return;
+
+      const currentSz = toScreen2D(STATE.z.x, STATE.z.y);
+      let allDelivered = true;
+
+      PSEUDO_STATE.votingOrbs.forEach(v => {
+        v.targetX = currentSz.x;
+        v.targetY = currentSz.y;
+
+        if (now < v.spawnTime) {
+          allDelivered = false;
+          return;
+        }
+
+        const t = Math.min(1.0, (now - v.spawnTime) / v.duration);
+        v.progress = easeOutQuad(t);
+
+        if (!v.delivered && v.progress >= 1.0) {
+          v.delivered = true;
+          if (STATE.task === 'classification') {
+            PSEUDO_STATE.tallyCounts[v.classId] = (PSEUDO_STATE.tallyCounts[v.classId] || 0) + 1;
+            const el = document.getElementById(`tally-count-${v.classId}`);
+            if (el) {
+              el.textContent = PSEUDO_STATE.tallyCounts[v.classId];
+              el.classList.add('bump');
+              setTimeout(() => el.classList.remove('bump'), 180);
+            }
+            const pctEl = document.getElementById(`tally-pct-${v.classId}`);
+            if (pctEl) {
+              const count = PSEUDO_STATE.tallyCounts[v.classId];
+              const pct = pred.nearest.length > 0 ? Math.round((count / pred.nearest.length) * 100) : 0;
+              pctEl.textContent = `(${pct}%)`;
+            }
+          }
+
+          // Add impact ripple on Z
+          PSEUDO_STATE.impactRipples.push({
+            color: v.color,
+            x: currentSz.x,
+            y: currentSz.y,
+            startTime: now,
+            duration: 280
+          });
+        }
+
+        if (!v.delivered) {
+          allDelivered = false;
+        }
+      });
+
+      // Update impact ripples
+      PSEUDO_STATE.impactRipples = PSEUDO_STATE.impactRipples.filter(r => (now - r.startTime) < r.duration);
+
+      // Check if all delivered & announce winner
+      if (allDelivered && !PSEUDO_STATE.winnerAnnounced) {
+        PSEUDO_STATE.winnerAnnounced = true;
+        showStaticVoteTally(pred);
+
+        const winColor = (STATE.task === 'regression')
+          ? getColorForValue(pred.yHat)
+          : ((STATE.classes.find(c => c.id === pred.label) || {}).color || '#2563eb');
+
+        PSEUDO_STATE.impactRipples.push({
+          color: winColor,
+          x: currentSz.x,
+          y: currentSz.y,
+          startTime: now,
+          duration: 650,
+          isWinner: true
+        });
+      }
+
+      requestDraw2D();
+
+      const ripplesActive = PSEUDO_STATE.impactRipples.length > 0;
+      if (!allDelivered || ripplesActive) {
+        requestAnimationFrame(voteLoop);
+      }
+    }
+
+    requestAnimationFrame(voteLoop);
+  }
+
+  function updatePseudocodeUI() {
+    const badge = document.getElementById('pseudo-step-badge');
+    if (badge) {
+      if (PSEUDO_STATE.currentStep === 0) {
+        badge.textContent = 'Ready';
+        badge.style.background = '#f1f5f9';
+        badge.style.color = '#64748b';
+      } else {
+        const curStepObj = PSEUDO_STEPS.find(s => s.step === PSEUDO_STATE.currentStep) || PSEUDO_STEPS[0];
+        badge.textContent = `Step ${curStepObj.step}/4: ${curStepObj.title}`;
+        badge.style.background = '#eff6ff';
+        badge.style.color = '#2563eb';
+      }
+    }
+
+    const codeList = document.getElementById('pseudo-code-list');
+    if (codeList) {
+      codeList.innerHTML = PSEUDO_STEPS.map(s => {
+        const isActive = (s.step === PSEUDO_STATE.currentStep);
+        const isDone = (PSEUDO_STATE.currentStep > 0 && s.step < PSEUDO_STATE.currentStep);
+        return `
+          <div class="pseudo-line ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" onclick="setPseudocodeStep(${s.step})">
+            <span class="pseudo-line-icon">${s.step}</span>
+            <span class="pseudo-line-text">${s.code}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    const explainer = document.getElementById('pseudo-explainer-text');
+    if (explainer) {
+      if (PSEUDO_STATE.currentStep === 0) {
+        explainer.style.display = 'none';
+        explainer.innerHTML = '';
+      } else {
+        const curStepObj = PSEUDO_STEPS.find(s => s.step === PSEUDO_STATE.currentStep) || PSEUDO_STEPS[0];
+        if (curStepObj.desc && curStepObj.desc.trim().length > 0) {
+          explainer.style.display = 'block';
+          explainer.innerHTML = curStepObj.desc;
+        } else {
+          explainer.style.display = 'none';
+        }
+      }
+    }
+  }
+
+  // Step 4 Vote Tally HUD Display (Static & Live on Z Drag)
+  function showStaticVoteTally(pred) {
+    if (!pred) pred = predictKNN([STATE.z.x, STATE.z.y]);
+    const tally = $('canvas-vote-tally');
+    if (!tally) return;
+    tally.style.display = 'flex';
+    if (typeof bringPopupToFront === 'function') bringPopupToFront(tally);
+
+    const titleEl = document.getElementById('tally-header-title');
+    if (titleEl) {
+      const titleSpan = titleEl.querySelector('span:last-child');
+      if (titleSpan) {
+        titleSpan.textContent = 'Kết quả';
+      }
+    }
+
+    const subHeader = document.getElementById('tally-subheader');
+    if (subHeader) {
+      if (STATE.task === 'regression') {
+        subHeader.innerHTML = `<span>k Láng giềng gần nhất</span><span>Giá trị y (Khoảng cách d)</span>`;
+      } else {
+        subHeader.innerHTML = `<span>Lớp dữ liệu</span><span>Số phiếu (Tỷ lệ %)</span>`;
+      }
+    }
+
+    const rowsContainer = document.getElementById('tally-rows-container');
+    const totalVotes = pred.nearest.length;
+    const winnerBanner = document.getElementById('tally-winner-banner');
+
+    if (STATE.task === 'regression') {
+      if (rowsContainer) {
+        rowsContainer.innerHTML = pred.nearest.map((n, idx) => {
+          const val = (n.point.val !== undefined) ? n.point.val : n.point.y;
+          const col = getColorForValue(val);
+          const w = STATE.weighting ? (1 / (n.dist + 1e-5)).toFixed(2) : '1.0';
+          return `
+            <div class="tally-row" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.84rem;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight:700; color:#d97706; font-size:0.75rem;">#${idx + 1}</span>
+                <span style="width:10px; height:10px; border-radius:50%; background:${col}; flex-shrink:0;"></span>
+                <span style="font-weight:600; color:#1e293b;">d = ${n.dist.toFixed(2)}</span>
+              </div>
+              <div style="display:flex; align-items:baseline; gap:6px; font-weight:700;">
+                <span style="color:${col}; font-size:0.95rem;">y = ${val.toFixed(2)}</span>
+                <span style="color:#64748b; font-size:0.72rem; font-weight:500;">(w=${w})</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (winnerBanner) {
+        winnerBanner.style.display = 'flex';
+        const zCol = getColorForValue(pred.yHat);
+        winnerBanner.innerHTML = `
+          <div class="pseudo-winner-card" style="display:flex; align-items:center; justify-content:center; padding:8px 12px; background:${zCol}15; border:1px solid ${zCol}60; border-radius:8px; width:100%; text-align:center;">
+            <div style="font-size:0.82rem; color:#1e293b; line-height:1.4;">
+              <div>Điểm cần đoán có giá trị: <b style="color:${zCol}; font-size:1.0rem;">ŷ = ${pred.yHat.toFixed(2)}</b></div>
+              <div style="color:#64748b; font-size:0.75rem; font-weight:500; margin-top:2px;">(k = ${pred.nearest.length})</div>
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      // Classification
+      if (rowsContainer) {
+        rowsContainer.innerHTML = STATE.classes.map(c => {
+          const votes = (pred.votes && pred.votes[c.id]) || (pred.counts && pred.counts[c.id]) || 0;
+          const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+          const isWinner = (c.id === pred.label);
+          return `
+            <div class="tally-row" id="tally-row-${c.id}" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.84rem;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="width:10px; height:10px; border-radius:50%; background:${c.color}; flex-shrink:0;"></span>
+                <span style="font-weight:600; color:#1e293b;">${c.name}</span>
+                <span class="status-badge ${isWinner ? 'winner' : 'loser'}" id="tally-status-${c.id}">${isWinner ? '👑 Dự đoán' : 'Thua'}</span>
+              </div>
+              <div style="display:flex; align-items:baseline; gap:5px; font-weight:700;">
+                <span class="pseudo-vote-count" id="tally-count-${c.id}" style="color:${c.color}; font-size:1.02rem;">${votes}</span>
+                <span id="tally-pct-${c.id}" style="color:#64748b; font-size:0.75rem; font-weight:500;">(${pct}%)</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (winnerBanner) {
+        const winnerCls = STATE.classes.find(c => c.id === pred.label) || { name: 'Đỏ', color: '#ef4444' };
+        const winnerVotes = (pred.votes && pred.votes[winnerCls.id]) || 0;
+        const pct = totalVotes > 0 ? Math.round((winnerVotes / totalVotes) * 100) : 100;
+        winnerBanner.style.display = 'flex';
+        winnerBanner.innerHTML = `
+          <div class="pseudo-winner-card" style="display:flex; align-items:center; justify-content:center; padding:8px 12px; background:${winnerCls.color}15; border:1px solid ${winnerCls.color}60; border-radius:8px; width:100%; text-align:center;">
+            <div style="font-size:0.82rem; color:#1e293b; line-height:1.4;">
+              <div>Điểm cần đoán thuộc <b style="color:${winnerCls.color}; font-size:0.9rem;">${winnerCls.name}!</b></div>
+              <div style="color:#64748b; font-size:0.75rem; font-weight:500; margin-top:2px;">(${winnerVotes}/${totalVotes} phiếu - ${pct}%)</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }
+
+// Floating Tooltip Engine
+const tooltipEl = document.getElementById('tooltip');
+function showTooltip(clientX, clientY, html) {
+  if (!tooltipEl) return;
+  tooltipEl.innerHTML = html;
+  tooltipEl.style.display = 'block';
+  const pad = 12;
+  let left = clientX + pad;
+  let top = clientY + pad;
+  if (left + 220 > window.innerWidth) left = clientX - 220 - pad;
+  if (top + 80 > window.innerHeight) top = clientY - 80 - pad;
+  tooltipEl.style.left = `${Math.max(4, left)}px`;
+  tooltipEl.style.top = `${Math.max(4, top)}px`;
+}
+function hideTooltip() {
+  if (tooltipEl) tooltipEl.style.display = 'none';
+}
+
+// DOM References
+const $ = id => document.getElementById(id);
+const cv2d = $('cv2d');
+const ctx2d = cv2d.getContext('2d');
+
+// Toast
+function showToast(msg) {
+  const toast = $('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+// Distance Functions
+const DIST = {
+  euclid: (a, b) => {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) {
+      const d = a[i] - b[i];
+      s += d * d;
+    }
+    return Math.sqrt(s);
+  },
+  manhattan: (a, b) => {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) {
+      s += Math.abs(a[i] - b[i]);
+    }
+    return s;
+  },
+  chebyshev: (a, b) => {
+    let m = 0;
+    for (let i = 0; i < a.length; i++) {
+      m = Math.max(m, Math.abs(a[i] - b[i]));
+    }
+    return m;
+  },
+  cosine: (a, b) => {
+    let dot = 0, na = 0, nb = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      na += a[i] * a[i];
+      nb += b[i] * b[i];
+    }
+    return (na > 0 && nb > 0) ? 1 - dot / (Math.sqrt(na) * Math.sqrt(nb)) : 1;
+  }
+};
+
+// Calculate Min-Max bounding box for normalization (always compute 3 dimensions to prevent NaN)
+function getBounds() {
+  if (STATE.data.length === 0) return { min: [0, 0, 0], max: [1, 1, 1] };
+  const dims = 3;
+  const min = Array(dims).fill(Infinity);
+  const max = Array(dims).fill(-Infinity);
+  STATE.data.forEach(p => {
+    const coords = [p.x, p.y, p.z || 0];
+    for (let i = 0; i < dims; i++) {
+      if (coords[i] < min[i]) min[i] = coords[i];
+      if (coords[i] > max[i]) max[i] = coords[i];
+    }
+  });
+  for (let i = 0; i < dims; i++) {
+    if (min[i] === max[i]) { min[i] -= 1; max[i] += 1; }
+  }
+  return { min, max };
+}
+
+// Pre-allocated typed arrays for ultra-fast KNN computation
+let arrX = new Float32Array(0);
+let arrY = new Float32Array(0);
+let arrC = new Uint8Array(0);
+let arrNormX = new Float32Array(0);
+let arrNormY = new Float32Array(0);
+let arrVal = new Float32Array(0);
+let arrNorm = new Float32Array(0);
+
+function syncDataArrays() {
+  const n = STATE.data.length;
+  if (arrX.length !== n) {
+    arrX = new Float32Array(n);
+    arrY = new Float32Array(n);
+    arrC = new Uint8Array(n);
+    arrNormX = new Float32Array(n);
+    arrNormY = new Float32Array(n);
+    arrVal = new Float32Array(n);
+    arrNorm = new Float32Array(n);
+  }
+  const { min, max } = getBounds();
+  const spanX = (max[0] - min[0]) || 1;
+  const spanY = (max[1] - min[1]) || 1;
+
+  for (let i = 0; i < n; i++) {
+    const p = STATE.data[i];
+    arrX[i] = p.x;
+    arrY[i] = p.y;
+    arrC[i] = p.c;
+    arrVal[i] = (p.val !== undefined) ? p.val : p.y;
+    if (STATE.norm) {
+      arrNormX[i] = (p.x - min[0]) / spanX;
+      arrNormY[i] = (p.y - min[1]) / spanY;
+      arrNorm[i] = Math.hypot(arrNormX[i], arrNormY[i]);
+    } else {
+      arrNorm[i] = Math.hypot(p.x, p.y);
+    }
+  }
+}
+
+// Regression Colormap & Value Helpers
+function getDatasetValueBounds() {
+  if (!STATE.data || STATE.data.length === 0) return { min: 0, max: 1 };
+  let min = Infinity, max = -Infinity;
+  STATE.data.forEach(p => {
+    const v = (p.val !== undefined) ? p.val : p.y;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  });
+  if (!isFinite(min) || min === max) { min = 0; max = 1; }
+  return { min, max };
+}
+
+function getRGBForValue(val, minVal, maxVal) {
+  if (minVal === undefined || maxVal === undefined || minVal === maxVal) {
+    const b = getDatasetValueBounds();
+    minVal = b.min; maxVal = b.max;
+  }
+  const t = Math.max(0, Math.min(1, (val - minVal) / ((maxVal - minVal) || 1)));
+  let r, g, b;
+  if (t < 0.33) {
+    const u = t / 0.33;
+    r = Math.round(37 + (6 - 37) * u);
+    g = Math.round(99 + (182 - 99) * u);
+    b = Math.round(235 + (212 - 235) * u);
+  } else if (t < 0.66) {
+    const u = (t - 0.33) / 0.33;
+    r = Math.round(6 + (245 - 6) * u);
+    g = Math.round(182 + (158 - 182) * u);
+    b = Math.round(212 + (11 - 212) * u);
+  } else {
+    const u = (t - 0.66) / 0.34;
+    r = Math.round(245 + (239 - 245) * u);
+    g = Math.round(158 + (68 - 158) * u);
+    b = Math.round(11 + (68 - 11) * u);
+  }
+  return [r, g, b];
+}
+
+function getColorForValue(val, minVal, maxVal) {
+  const [r, g, b] = getRGBForValue(val, minVal, maxVal);
+  return `rgb(${r},${g},${b})`;
+}
+
+function setTaskMode(task) {
+  if (STATE.task === task) return;
+  STATE.task = task;
+  const btnCls = $('task-btn-cls');
+  const btnReg = $('task-btn-reg');
+  if (btnCls) btnCls.classList.toggle('active', task === 'classification');
+  if (btnReg) btnReg.classList.toggle('active', task === 'regression');
+
+  if (task === 'regression') {
+    if (!STATE.preset || !STATE.preset.startsWith('reg_')) {
+      const sel = $('preset-select');
+      if (sel) sel.value = 'reg_house';
+      setPreset('reg_house');
+      return;
+    }
+  } else {
+    if (STATE.preset && STATE.preset.startsWith('reg_')) {
+      const sel = $('preset-select');
+      if (sel) sel.value = 'moons';
+      setPreset('moons');
+      return;
+    }
+  }
+
+  regionDirty = true;
+  updateUI();
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+}
+
+// Star marker drawing function (matching classic code for Z)
+function star(c, x, y, R) {
+  c.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? R * 0.42 : R;
+    const t = -Math.PI / 2 + i * Math.PI / 5;
+    c.lineTo(x + r * Math.cos(t), y + r * Math.sin(t));
+  }
+  c.closePath();
+}
+
+// k-NN Prediction Core for Query Point Z
+function predictKNN(pointCoords, customK = STATE.k) {
+  if (STATE.data.length === 0) {
+    return { label: -1, nearest: [], votes: {}, weights: {}, r: 0, distances: [] };
+  }
+
+  const dims = 2;
+  const fDist = DIST[STATE.metric];
+  const { min, max } = STATE.norm ? getBounds() : { min: null, max: null };
+
+  const normPoint = STATE.norm
+    ? pointCoords.slice(0, dims).map((v, i) => (v - min[i]) / (max[i] - min[i]))
+    : pointCoords.slice(0, dims);
+
+  const distances = STATE.data.map((p, idx) => {
+    const raw = [p.x, p.y, p.z || 0].slice(0, dims);
+    const pCoords = STATE.norm
+      ? raw.map((v, i) => (v - min[i]) / (max[i] - min[i]))
+      : raw;
+    return {
+      index: idx,
+      point: p,
+      dist: fDist(normPoint, pCoords)
+    };
+  });
+
+  // Stable sort by distance
+  distances.sort((a, b) => a.dist - b.dist || a.index - b.index);
+
+  const kActual = Math.min(customK, distances.length);
+  const nearest = distances.slice(0, kActual);
+  const r = nearest.length > 0 ? nearest[nearest.length - 1].dist : 0;
+
+  // Tally votes
+  const votes = {};
+  const weights = {};
+  STATE.classes.forEach(c => {
+    votes[c.id] = 0;
+    weights[c.id] = 0;
+  });
+
+  nearest.forEach(n => {
+    const cid = n.point.c;
+    if (votes[cid] !== undefined) votes[cid]++;
+    const w = STATE.weighting ? 1 / (n.dist + 1e-5) : 1;
+    if (weights[cid] !== undefined) weights[cid] += w;
+  });
+
+  // Determine winner
+  let bestClass = -1;
+  let maxScore = -1;
+  const tiedClasses = [];
+
+  STATE.classes.forEach(c => {
+    const score = STATE.weighting ? weights[c.id] : votes[c.id];
+    if (score > maxScore) {
+      maxScore = score;
+      bestClass = c.id;
+      tiedClasses.length = 0;
+      tiedClasses.push(c.id);
+    } else if (score === maxScore && score > 0) {
+      tiedClasses.push(c.id);
+    }
+  });
+
+  // Tie-breaking: closest neighbor
+  if (tiedClasses.length > 1) {
+    for (const n of nearest) {
+      if (tiedClasses.includes(n.point.c)) {
+        bestClass = n.point.c;
+        break;
+      }
+    }
+  }
+
+  if (STATE.task === 'regression') {
+    let sumY = 0;
+    let sumW = 0;
+    let minY = Infinity, maxY = -Infinity;
+
+    nearest.forEach(n => {
+      const v = (n.point.val !== undefined) ? n.point.val : n.point.y;
+      if (v < minY) minY = v;
+      if (v > maxY) maxY = v;
+      const w = STATE.weighting ? 1 / (n.dist + 1e-5) : 1;
+      sumY += v * w;
+      sumW += w;
+    });
+
+    const yHat = sumW > 0 ? (sumY / sumW) : 0;
+    const yMean = nearest.length > 0 ? (nearest.reduce((s, n) => s + ((n.point.val !== undefined) ? n.point.val : n.point.y), 0) / nearest.length) : 0;
+
+    return {
+      label: -1,
+      isRegression: true,
+      yHat: +yHat.toFixed(2),
+      yMean: +yMean.toFixed(2),
+      yMin: minY !== Infinity ? +minY.toFixed(2) : 0,
+      yMax: maxY !== -Infinity ? +maxY.toFixed(2) : 0,
+      nearest,
+      votes: {},
+      counts: {},
+      weights: {},
+      r,
+      distances
+    };
+  }
+
+  return { label: bestClass, nearest, votes, counts: votes, weights, r, distances, isRegression: false };
+}
+
+/* ==========================================================
+   2D DESMOS ENGINE & HIGH-PERFORMANCE DECISION BOUNDARY
+   ========================================================== */
+
+function getNiceStep(target) {
+  if (target <= 0 || !isFinite(target)) return 1;
+  const p = Math.floor(Math.log10(target));
+  const b = Math.pow(10, p);
+  const frac = target / b;
+  if (frac < 1.5) return 1 * b;
+  if (frac < 3.5) return 2 * b;
+  if (frac < 7.5) return 5 * b;
+  return 10 * b;
+}
+
+function formatCoord(val, scale = (typeof STATE !== 'undefined' ? STATE.scale2D : 60)) {
+  if (Math.abs(val) < 1e-12) return '0.00';
+  if (scale >= 5000) return val.toFixed(6);
+  if (scale >= 500) return val.toFixed(4);
+  if (scale >= 50) return val.toFixed(2);
+  if (scale >= 5) return val.toFixed(2);
+  if (scale < 0.1) return val.toExponential(2);
+  return val.toFixed(2);
+}
+
+function formatAxisNumber(val, step) {
+  if (Math.abs(val) < 1e-12) return '0';
+  const absVal = Math.abs(val);
+  if (absVal >= 1e6 || (absVal < 1e-3 && absVal > 0)) {
+    return val.toExponential(1).replace('+', '');
+  }
+  if (step < 1) {
+    const dec = Math.min(6, Math.max(0, Math.ceil(-Math.log10(step) + 1e-9)));
+    return parseFloat(val.toFixed(dec)).toString();
+  }
+  return Math.round(val).toString();
+}
+
+function toScreen2D(mx, my) {
+  return {
+    x: STATE.origin2D.x + mx * STATE.scale2D,
+    y: STATE.origin2D.y - my * STATE.scale2D
+  };
+}
+
+function toMath2D(sx, sy) {
+  return {
+    x: (sx - STATE.origin2D.x) / STATE.scale2D,
+    y: (STATE.origin2D.y - sy) / STATE.scale2D
+  };
+}
+
+// RequestAnimationFrame Rendering Loop (Prevents mouse event flooding)
+let renderPending = false;
+function requestDraw2D() {
+  if (!renderPending) {
+    renderPending = true;
+    requestAnimationFrame(() => {
+      renderPending = false;
+      draw2D();
+    });
+  }
+}
+
+// High-performance Decision Regions Engine
+const regionCanvas = document.createElement('canvas');
+const regionCtx = regionCanvas.getContext('2d');
+let cachedBox = null;
+let regionDirty = true;
+let refreshTimer = null;
+
+function scheduleRegionRefresh(delay = 60) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    rebuildDecisionRegions();
+    requestDraw2D();
+  }, delay);
+}
+
+function rebuildDecisionRegions() {
+  if (!STATE.showRegions || STATE.data.length === 0) {
+    cachedBox = null;
+    return;
+  }
+
+  syncDataArrays();
+  const n = STATE.data.length;
+  const k = Math.min(STATE.k, n);
+  if (n === 0 || k === 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv2d.width / dpr;
+  const h = cv2d.height / dpr;
+
+  // Render over a math bounding box with 35% margin padding around screen
+  const padX = w * 0.35;
+  const padY = h * 0.35;
+  const mathMin = toMath2D(-padX, h + padY);
+  const mathMax = toMath2D(w + padX, -padY);
+
+  const minX = mathMin.x, maxX = mathMax.x;
+  const minY = mathMin.y, maxY = mathMax.y;
+
+  // High-precision adaptive resolution (step size 4.0px for crisp vector-like borders)
+  const targetStep = 4.0;
+  const totalW = w + 2 * padX;
+  const totalH = h + 2 * padY;
+  const resW = Math.max(80, Math.min(380, Math.round(totalW / targetStep)));
+  const resH = Math.max(60, Math.min(250, Math.round(totalH / targetStep)));
+
+  if (regionCanvas.width !== resW || regionCanvas.height !== resH) {
+    regionCanvas.width = resW;
+    regionCanvas.height = resH;
+  }
+
+  const imgData = regionCtx.createImageData(resW, resH);
+  const buf = imgData.data;
+
+  // Pre-parse class RGB
+  const numClasses = Math.max(8, STATE.classes.length);
+  const classRGB = new Uint8Array(numClasses * 3);
+  STATE.classes.forEach(c => {
+    if (c.id < numClasses) {
+      const hex = c.color.replace('#', '');
+      classRGB[c.id * 3] = parseInt(hex.substring(0, 2), 16);
+      classRGB[c.id * 3 + 1] = parseInt(hex.substring(2, 4), 16);
+      classRGB[c.id * 3 + 2] = parseInt(hex.substring(4, 6), 16);
+    }
+  });
+
+  const px = STATE.norm ? arrNormX : arrX;
+  const py = STATE.norm ? arrNormY : arrY;
+  const pc = arrC;
+
+  const { min, max } = STATE.norm ? getBounds() : { min: [0, 0], max: [1, 1] };
+  const spanX = (max[0] - min[0]) || 1;
+  const spanY = (max[1] - min[1]) || 1;
+
+  const topD = new Float32Array(k);
+  const topC = new Uint8Array(k);
+  const topV = new Float32Array(k);
+  const votes = new Float32Array(numClasses);
+  const isRegression = (STATE.task === 'regression');
+  const valBounds = isRegression ? getDatasetValueBounds() : null;
+
+  const stepX = (maxX - minX) / resW;
+  const stepY = (maxY - minY) / resH;
+
+  const isEuclid = STATE.metric === 'euclid';
+  const isManhattan = STATE.metric === 'manhattan';
+  const isChebyshev = STATE.metric === 'chebyshev';
+  const isCosine = STATE.metric === 'cosine';
+  const isWeighted = STATE.weighting;
+
+  for (let r = 0; r < resH; r++) {
+    const rawY = maxY - (r + 0.5) * stepY;
+    const qy = STATE.norm ? (rawY - min[1]) / spanY : rawY;
+
+    for (let c = 0; c < resW; c++) {
+      const rawX = minX + (c + 0.5) * stepX;
+      const qx = STATE.norm ? (rawX - min[0]) / spanX : rawX;
+      const qNorm = isCosine ? Math.hypot(qx, qy) : 0;
+
+      // Reset top K
+      for (let j = 0; j < k; j++) {
+        topD[j] = Infinity;
+        topC[j] = 255;
+        topV[j] = 0;
+      }
+
+      // Fast typed-array KNN search with insertion sort (zero object allocation)
+      for (let i = 0; i < n; i++) {
+        let d;
+        if (isEuclid) {
+          const dx = px[i] - qx;
+          const dy = py[i] - qy;
+          d = dx * dx + dy * dy; // squared distance for monotonic ranking
+        } else if (isManhattan) {
+          d = Math.abs(px[i] - qx) + Math.abs(py[i] - qy);
+        } else if (isChebyshev) {
+          d = Math.max(Math.abs(px[i] - qx), Math.abs(py[i] - qy));
+        } else {
+          const dot = px[i] * qx + py[i] * qy;
+          const denom = arrNorm[i] * qNorm;
+          d = (denom > 1e-9) ? 1 - dot / denom : 1;
+        }
+
+        if (d < topD[k - 1]) {
+          let pos = k - 1;
+          while (pos > 0 && d < topD[pos - 1]) {
+            topD[pos] = topD[pos - 1];
+            topC[pos] = topC[pos - 1];
+            topV[pos] = topV[pos - 1];
+            pos--;
+          }
+          topD[pos] = d;
+          topC[pos] = pc[i];
+          topV[pos] = arrVal[i];
+        }
+      }
+
+      const pIdx = (r * resW + c) * 4;
+
+      if (isRegression) {
+        let yHat = 0;
+        if (isWeighted) {
+          let wSum = 0;
+          for (let j = 0; j < k; j++) {
+            const actualD = isEuclid ? Math.sqrt(topD[j]) : topD[j];
+            const w = 1 / (actualD + 1e-5);
+            yHat += topV[j] * w;
+            wSum += w;
+          }
+          yHat = wSum > 0 ? yHat / wSum : 0;
+        } else {
+          for (let j = 0; j < k; j++) {
+            yHat += topV[j];
+          }
+          yHat = k > 0 ? yHat / k : 0;
+        }
+        const [cr, cg, cb] = getRGBForValue(yHat, valBounds.min, valBounds.max);
+        buf[pIdx] = cr;
+        buf[pIdx + 1] = cg;
+        buf[pIdx + 2] = cb;
+        buf[pIdx + 3] = 48; // Translucent continuous heatmap
+      } else {
+        // Tally votes
+        for (let v = 0; v < numClasses; v++) votes[v] = 0;
+
+        for (let j = 0; j < k; j++) {
+          const cid = topC[j];
+          if (cid < numClasses) {
+            if (isWeighted) {
+              const actualD = isEuclid ? Math.sqrt(topD[j]) : topD[j];
+              votes[cid] += 1 / (actualD + 1e-5);
+            } else {
+              votes[cid] += 1;
+            }
+          }
+        }
+
+        // Determine winner with nearest neighbor tie-break
+        let best = 0;
+        let maxVote = -1;
+        let tie = false;
+
+        for (let v = 0; v < numClasses; v++) {
+          if (votes[v] > maxVote) {
+            maxVote = votes[v];
+            best = v;
+            tie = false;
+          } else if (votes[v] === maxVote && maxVote > 0) {
+            tie = true;
+          }
+        }
+
+        if (tie) {
+          for (let j = 0; j < k; j++) {
+            const cid = topC[j];
+            if (votes[cid] === maxVote) {
+              best = cid;
+              break;
+            }
+          }
+        }
+
+        const rgbIdx = best * 3;
+        buf[pIdx] = classRGB[rgbIdx];
+        buf[pIdx + 1] = classRGB[rgbIdx + 1];
+        buf[pIdx + 2] = classRGB[rgbIdx + 2];
+        buf[pIdx + 3] = 48; // Translucent pastel
+      }
+    }
+  }
+
+  regionCtx.putImageData(imgData, 0, 0);
+  cachedBox = { minX, maxX, minY, maxY };
+  regionDirty = false;
+}
+
+function renderDecisionRegions2D() {
+  if (!STATE.showRegions || STATE.data.length === 0) return;
+
+  if (!cachedBox) {
+    rebuildDecisionRegions();
+  }
+
+  if (cachedBox && regionCanvas.width > 0) {
+    const p0 = toScreen2D(cachedBox.minX, cachedBox.maxY);
+    const p1 = toScreen2D(cachedBox.maxX, cachedBox.minY);
+    const sw = p1.x - p0.x;
+    const sh = p1.y - p0.y;
+
+    ctx2d.save();
+    // Do NOT blend colors in classification mode (eliminates boundary distortion & false color bleeding)
+    // ONLY use smooth bilinear interpolation for continuous regression heatmap
+    ctx2d.imageSmoothingEnabled = (STATE.task === 'regression');
+    ctx2d.drawImage(regionCanvas, p0.x, p0.y, sw, sh);
+    ctx2d.restore();
+  }
+}
+
+// Draw 2D Desmos Canvas (Runs at native 60/120fps)
+function draw2D() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv2d.width / dpr;
+  const h = cv2d.height / dpr;
+
+  ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx2d.clearRect(0, 0, w, h);
+
+  // Pure clean white canvas background
+  ctx2d.fillStyle = '#ffffff';
+  ctx2d.fillRect(0, 0, w, h);
+
+  // 1. Decision Boundary Background (Fades away in Step 3+)
+  if (STATE.showRegions) {
+    let regionAlpha = 1.0;
+    if (PSEUDO_STATE.currentStep >= 3) {
+      regionAlpha = Math.max(0, PSEUDO_STATE.exteriorOpacity);
+    }
+    if (regionAlpha > 0.02) {
+      ctx2d.save();
+      ctx2d.globalAlpha = regionAlpha;
+      renderDecisionRegions2D();
+      ctx2d.restore();
+    }
+  }
+
+  // 2. Desmos Grid (Infinite Vector Grid with Adaptive Formatting)
+  const targetPx = 80;
+  const majorStep = getNiceStep(targetPx / STATE.scale2D);
+  const minorStep = majorStep / 5;
+
+  const minMath = toMath2D(0, h);
+  const maxMath = toMath2D(w, 0);
+
+  // Minor Grid Lines (Only render when spacing >= 12px to avoid sub-pixel clutter)
+  const minorPixelSpacing = minorStep * STATE.scale2D;
+  if (minorPixelSpacing >= 12) {
+    ctx2d.beginPath();
+    ctx2d.strokeStyle = '#f1f5f9';
+    ctx2d.lineWidth = 1;
+    const startMinorX = Math.floor(minMath.x / minorStep) * minorStep;
+    const endMinorX = Math.ceil(maxMath.x / minorStep) * minorStep;
+    const numMinorX = Math.min(200, Math.max(0, Math.round((endMinorX - startMinorX) / minorStep)));
+    for (let i = 0; i <= numMinorX; i++) {
+      const x = startMinorX + i * minorStep;
+      const sx = Math.round(toScreen2D(x, 0).x) + 0.5;
+      ctx2d.moveTo(sx, 0);
+      ctx2d.lineTo(sx, h);
+    }
+    const startMinorY = Math.floor(minMath.y / minorStep) * minorStep;
+    const endMinorY = Math.ceil(maxMath.y / minorStep) * minorStep;
+    const numMinorY = Math.min(200, Math.max(0, Math.round((endMinorY - startMinorY) / minorStep)));
+    for (let i = 0; i <= numMinorY; i++) {
+      const y = startMinorY + i * minorStep;
+      const sy = Math.round(toScreen2D(0, y).y) + 0.5;
+      ctx2d.moveTo(0, sy);
+      ctx2d.lineTo(w, sy);
+    }
+    ctx2d.stroke();
+  }
+
+  // Major Grid Lines
+  ctx2d.beginPath();
+  ctx2d.strokeStyle = '#e2e8f0';
+  ctx2d.lineWidth = 1;
+  const startMajorX = Math.floor(minMath.x / majorStep) * majorStep;
+  const endMajorX = Math.ceil(maxMath.x / majorStep) * majorStep;
+  const numMajorX = Math.min(60, Math.max(0, Math.round((endMajorX - startMajorX) / majorStep)));
+  for (let i = 0; i <= numMajorX; i++) {
+    const x = startMajorX + i * majorStep;
+    const sx = Math.round(toScreen2D(x, 0).x) + 0.5;
+    ctx2d.moveTo(sx, 0);
+    ctx2d.lineTo(sx, h);
+  }
+  const startMajorY = Math.floor(minMath.y / majorStep) * majorStep;
+  const endMajorY = Math.ceil(maxMath.y / majorStep) * majorStep;
+  const numMajorY = Math.min(60, Math.max(0, Math.round((endMajorY - startMajorY) / majorStep)));
+  for (let i = 0; i <= numMajorY; i++) {
+    const y = startMajorY + i * majorStep;
+    const sy = Math.round(toScreen2D(0, y).y) + 0.5;
+    ctx2d.moveTo(0, sy);
+    ctx2d.lineTo(w, sy);
+  }
+  ctx2d.stroke();
+
+  // Coordinate Axes (X and Y = 0)
+  const originScreen = toScreen2D(0, 0);
+  ctx2d.beginPath();
+  ctx2d.strokeStyle = '#94a3b8';
+  ctx2d.lineWidth = 1.6;
+
+  // Y Axis (X = 0)
+  if (originScreen.x >= 0 && originScreen.x <= w) {
+    ctx2d.moveTo(Math.round(originScreen.x) + 0.5, 0);
+    ctx2d.lineTo(Math.round(originScreen.x) + 0.5, h);
+  }
+  // X Axis (Y = 0)
+  if (originScreen.y >= 0 && originScreen.y <= h) {
+    ctx2d.moveTo(0, Math.round(originScreen.y) + 0.5);
+    ctx2d.lineTo(w, Math.round(originScreen.y) + 0.5);
+  }
+  ctx2d.stroke();
+
+  // Desmos Numbers on Axes (pinned to viewport borders)
+  const vEl = $('viewport');
+  const viewW = vEl ? vEl.clientWidth : w;
+  const viewH = vEl ? vEl.clientHeight : h;
+
+  ctx2d.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx2d.fillStyle = '#64748b';
+  const labelY = Math.max(16, Math.min(viewH - 8, originScreen.y + 14));
+  ctx2d.textAlign = 'center';
+  ctx2d.textBaseline = 'top';
+
+  for (let i = 0; i <= numMajorX; i++) {
+    const x = startMajorX + i * majorStep;
+    if (Math.abs(x) < 1e-9) continue;
+    const sx = toScreen2D(x, 0).x;
+    if (sx >= 20 && sx <= w - 20) {
+      ctx2d.fillText(formatAxisNumber(x, majorStep), sx, labelY);
+    }
+  }
+
+  const labelX = Math.max(24, Math.min(viewW - 12, originScreen.x - 8));
+  ctx2d.textAlign = 'right';
+  ctx2d.textBaseline = 'middle';
+  for (let i = 0; i <= numMajorY; i++) {
+    const y = startMajorY + i * majorStep;
+    if (Math.abs(y) < 1e-9) continue;
+    const sy = toScreen2D(0, y).y;
+    if (sy >= 16 && sy <= h - 16) {
+      ctx2d.fillText(formatAxisNumber(y, majorStep), labelX, sy);
+    }
+  }
+  // Origin '0'
+  if (originScreen.x >= 0 && originScreen.x <= w && originScreen.y >= 0 && originScreen.y <= h) {
+    ctx2d.fillText('0', originScreen.x - 6, originScreen.y + 12);
+  }
+
+  // 3. Query Point Z & Prediction
+  const pred = predictKNN([STATE.z.x, STATE.z.y]);
+  const sz = toScreen2D(STATE.z.x, STATE.z.y);
+  const ptRadius = 4.5; // Desmos point radius
+
+  // Step 2: Distance Measuring Animation (Smooth continuous lines without premature circle)
+  if (PSEUDO_STATE.currentStep === 2 && STATE.data.length > 0) {
+    const progress = easeOutQuad(PSEUDO_STATE.measuringProgress);
+    const originMath = STATE.norm ? (getBounds().min) : [0, 0];
+    const originScreen = toScreen2D(originMath[0], originMath[1]);
+
+    ctx2d.save();
+    STATE.data.forEach(p => {
+      const sp = toScreen2D(p.x, p.y);
+      const startPos = (STATE.metric === 'cosine') ? originScreen : sz;
+      const curX = startPos.x + (sp.x - startPos.x) * progress;
+      const curY = startPos.y + (sp.y - startPos.y) * progress;
+
+      // Smooth line shooting out from Z to data point
+      ctx2d.beginPath();
+      ctx2d.moveTo(startPos.x, startPos.y);
+      ctx2d.lineTo(curX, curY);
+      ctx2d.strokeStyle = 'rgba(37, 99, 235, 0.45)';
+      ctx2d.lineWidth = 1.2;
+      ctx2d.setLineDash([3, 3]);
+      ctx2d.stroke();
+
+      // Gentle soft ripple ONLY when line actually reaches the point (progress >= 0.95)
+      if (progress >= 0.95) {
+        const t = (progress - 0.95) / 0.05;
+        ctx2d.beginPath();
+        ctx2d.arc(sp.x, sp.y, ptRadius + 2.5 * t, 0, Math.PI * 2);
+        ctx2d.strokeStyle = `rgba(37, 99, 235, ${0.45 * (1 - t)})`;
+        ctx2d.lineWidth = 1.0;
+        ctx2d.setLineDash([]);
+        ctx2d.stroke();
+      }
+    });
+    ctx2d.restore();
+  }
+
+  // Step 3+: ANIMATED ENCLOSING BOUNDARY (Traces the stroke perimeter at radius R directly)
+  const showBoundary = (PSEUDO_STATE.currentStep === 0 || PSEUDO_STATE.currentStep >= 3);
+  if (showBoundary && pred.nearest.length > 0) {
+    let rPixX = pred.r * STATE.scale2D;
+    let rPixY = pred.r * STATE.scale2D;
+    if (STATE.norm) {
+      const { min, max } = getBounds();
+      const spanX = (max[0] - min[0]) || 1;
+      const spanY = (max[1] - min[1]) || 1;
+      rPixX = pred.r * spanX * STATE.scale2D;
+      rPixY = pred.r * spanY * STATE.scale2D;
+    }
+
+    const traceP = (PSEUDO_STATE.currentStep === 3) ? PSEUDO_STATE.enclosingProgress : 1.0;
+
+    // Only draw when traceP > 0.001 (waits for line connection phase in Step 3)
+    const shouldDraw = (traceP > 0.001) && ((STATE.metric === 'cosine') || (rPixX > 0.5));
+
+    if (shouldDraw) {
+      ctx2d.save();
+      ctx2d.strokeStyle = 'rgba(245, 158, 11, 0.9)';
+      const fillAlpha = (traceP >= 0.95) ? 0.08 : 0.08 * (traceP / 0.95);
+      ctx2d.fillStyle = `rgba(245, 158, 11, ${fillAlpha})`;
+      ctx2d.lineWidth = 1.8;
+      ctx2d.setLineDash([5, 4]);
+
+      const isFull = (traceP >= 0.999);
+
+      ctx2d.beginPath();
+      if (STATE.metric === 'euclid') {
+        const startAng = -Math.PI / 2; // start from top
+        const sweepAng = isFull ? (Math.PI * 2) : (Math.PI * 2 * traceP);
+        const endAng = startAng + sweepAng;
+
+        if (STATE.norm && Math.abs(rPixX - rPixY) > 1e-3) {
+          ctx2d.ellipse(sz.x, sz.y, Math.max(1, rPixX), Math.max(1, rPixY), 0, startAng, endAng);
+        } else {
+          ctx2d.arc(sz.x, sz.y, Math.max(1, rPixX), startAng, endAng);
+        }
+        if (isFull) {
+          ctx2d.fill();
+        }
+      } else if (STATE.metric === 'manhattan') {
+        // Diamond vertices at radius R
+        const v0 = { x: sz.x, y: sz.y - rPixY }; // top
+        const v1 = { x: sz.x + rPixX, y: sz.y }; // right
+        const v2 = { x: sz.x, y: sz.y + rPixY }; // bottom
+        const v3 = { x: sz.x - rPixX, y: sz.y }; // left
+
+        ctx2d.moveTo(v0.x, v0.y);
+        const t = Math.min(1.0, traceP);
+        if (t <= 0.25) {
+          const u = t / 0.25;
+          ctx2d.lineTo(v0.x + (v1.x - v0.x) * u, v0.y + (v1.y - v0.y) * u);
+        } else if (t <= 0.5) {
+          ctx2d.lineTo(v1.x, v1.y);
+          const u = (t - 0.25) / 0.25;
+          ctx2d.lineTo(v1.x + (v2.x - v1.x) * u, v1.y + (v2.y - v1.y) * u);
+        } else if (t <= 0.75) {
+          ctx2d.lineTo(v1.x, v1.y);
+          ctx2d.lineTo(v2.x, v2.y);
+          const u = (t - 0.5) / 0.25;
+          ctx2d.lineTo(v2.x + (v3.x - v2.x) * u, v2.y + (v3.y - v2.y) * u);
+        } else {
+          ctx2d.lineTo(v1.x, v1.y);
+          ctx2d.lineTo(v2.x, v2.y);
+          ctx2d.lineTo(v3.x, v3.y);
+          const u = (t - 0.75) / 0.25;
+          ctx2d.lineTo(v3.x + (v0.x - v3.x) * u, v3.y + (v0.y - v3.y) * u);
+        }
+        if (isFull) {
+          ctx2d.closePath();
+          ctx2d.fill();
+        }
+      } else if (STATE.metric === 'chebyshev') {
+        // Box corners at radius R
+        const c0 = { x: sz.x - rPixX, y: sz.y - rPixY }; // top-left
+        const c1 = { x: sz.x + rPixX, y: sz.y - rPixY }; // top-right
+        const c2 = { x: sz.x + rPixX, y: sz.y + rPixY }; // bottom-right
+        const c3 = { x: sz.x - rPixX, y: sz.y + rPixY }; // bottom-left
+
+        ctx2d.moveTo(c0.x, c0.y);
+        const t = Math.min(1.0, traceP);
+        if (t <= 0.25) {
+          const u = t / 0.25;
+          ctx2d.lineTo(c0.x + (c1.x - c0.x) * u, c0.y);
+        } else if (t <= 0.5) {
+          ctx2d.lineTo(c1.x, c1.y);
+          const u = (t - 0.25) / 0.25;
+          ctx2d.lineTo(c1.x, c1.y + (c2.y - c1.y) * u);
+        } else if (t <= 0.75) {
+          ctx2d.lineTo(c1.x, c1.y);
+          ctx2d.lineTo(c2.x, c2.y);
+          const u = (t - 0.5) / 0.25;
+          ctx2d.lineTo(c2.x + (c3.x - c2.x) * u, c2.y);
+        } else {
+          ctx2d.lineTo(c1.x, c1.y);
+          ctx2d.lineTo(c2.x, c2.y);
+          ctx2d.lineTo(c3.x, c3.y);
+          const u = (t - 0.75) / 0.25;
+          ctx2d.lineTo(c3.x, c3.y + (c0.y - c3.y) * u);
+        }
+        if (isFull) {
+          ctx2d.closePath();
+          ctx2d.fill();
+        }
+      } else if (STATE.metric === 'cosine') {
+        const originMath = STATE.norm ? (getBounds().min) : [0, 0];
+        const oScreen = toScreen2D(originMath[0], originMath[1]);
+        const zVecX = STATE.z.x - originMath[0];
+        const zVecY = STATE.z.y - originMath[1];
+        const zNorm = Math.hypot(zVecX, zVecY);
+        const theta = (zNorm > 1e-5) ? Math.atan2(zVecY, zVecX) : 0;
+        const cosVal = Math.max(-1, Math.min(1, 1 - pred.r));
+        let dTheta = Math.acos(cosVal);
+        dTheta = Math.max(0.005, dTheta);
+
+        const dZ = Math.hypot(sz.x - oScreen.x, sz.y - oScreen.y);
+        let maxNbDist = dZ;
+        pred.nearest.forEach(n => {
+          const sp = toScreen2D(n.point.x, n.point.y);
+          const d = Math.hypot(sp.x - oScreen.x, sp.y - oScreen.y);
+          if (d > maxNbDist) maxNbDist = d;
+        });
+        const dpr = window.devicePixelRatio || 1;
+        const cw = cv2d.width / dpr;
+        const ch = cv2d.height / dpr;
+        const screenDiag = Math.hypot(cw, ch);
+        const coneRadius = Math.max(screenDiag * 1.5, maxNbDist * 2.0);
+
+        const screenCenter = -theta;
+        const sweepSpan = dTheta * Math.max(0.001, traceP);
+        const ang1 = screenCenter - sweepSpan;
+        const ang2 = screenCenter + sweepSpan;
+
+        ctx2d.beginPath();
+        if (dTheta >= Math.PI - 1e-4) {
+          ctx2d.arc(oScreen.x, oScreen.y, coneRadius, 0, Math.PI * 2 * Math.min(1.0, traceP));
+        } else {
+          ctx2d.moveTo(oScreen.x, oScreen.y);
+          ctx2d.lineTo(oScreen.x + coneRadius * Math.cos(ang1), oScreen.y + coneRadius * Math.sin(ang1));
+          ctx2d.arc(oScreen.x, oScreen.y, coneRadius, ang1, ang2, false);
+          ctx2d.lineTo(oScreen.x, oScreen.y);
+        }
+        if (isFull) {
+          ctx2d.closePath();
+          ctx2d.fill();
+        }
+      }
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+  }
+
+  // Connecting lines to nearest neighbors (Step 3+ or normal mode)
+  const showLines = (PSEUDO_STATE.currentStep === 0 || PSEUDO_STATE.currentStep >= 3);
+  if (showLines && pred.nearest.length > 0) {
+    const originMath = STATE.norm ? (getBounds().min) : [0, 0];
+    const originScreen = toScreen2D(originMath[0], originMath[1]);
+    ctx2d.save();
+    ctx2d.setLineDash([3, 3]);
+    if (PSEUDO_STATE.currentStep === 3) {
+      const cp = Math.max(0, Math.min(1.0, PSEUDO_STATE.colorTransitionProgress));
+      const r = Math.round(37 + (217 - 37) * cp);
+      const g = Math.round(99 + (119 - 99) * cp);
+      const b = Math.round(235 + (6 - 235) * cp);
+      const a = (0.45 + (0.95 - 0.45) * cp).toFixed(2);
+      ctx2d.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+      ctx2d.lineWidth = 1.2 + 0.6 * cp;
+    } else {
+      ctx2d.strokeStyle = 'rgba(217, 119, 6, 0.95)';
+      ctx2d.lineWidth = 1.8;
+    }
+    pred.nearest.forEach(n => {
+      const sp = toScreen2D(n.point.x, n.point.y);
+      ctx2d.beginPath();
+      ctx2d.moveTo(sz.x, sz.y);
+      ctx2d.lineTo(sp.x, sp.y);
+      ctx2d.stroke();
+    });
+    ctx2d.restore();
+
+    // In Step 3: Fade out lines to non-neighbors that were drawn in Step 2
+    if (PSEUDO_STATE.currentStep === 3 && PSEUDO_STATE.exteriorOpacity > 0.005) {
+      ctx2d.save();
+      ctx2d.setLineDash([3, 3]);
+      ctx2d.lineWidth = 1.2;
+      ctx2d.strokeStyle = `rgba(37, 99, 235, ${0.45 * PSEUDO_STATE.exteriorOpacity})`;
+      pred.distances.slice(STATE.k).forEach(item => {
+        const sp = toScreen2D(item.point.x, item.point.y);
+        ctx2d.beginPath();
+        ctx2d.moveTo(sz.x, sz.y);
+        ctx2d.lineTo(sp.x, sp.y);
+        ctx2d.stroke();
+      });
+      ctx2d.restore();
+    }
+
+    // Cosine reference ray (extends through Z across the viewing area)
+    if (STATE.metric === 'cosine') {
+      const oScreen = originScreen;
+      const zVecX = STATE.z.x - originMath[0];
+      const zVecY = STATE.z.y - originMath[1];
+      const theta = (Math.hypot(zVecX, zVecY) > 1e-5) ? Math.atan2(zVecY, zVecX) : 0;
+      const dpr = window.devicePixelRatio || 1;
+      const rayLen = Math.max(Math.hypot(cv2d.width / dpr, cv2d.height / dpr) * 1.5, Math.hypot(sz.x - oScreen.x, sz.y - oScreen.y) * 1.5);
+      ctx2d.save();
+      ctx2d.strokeStyle = '#f59e0b';
+      ctx2d.lineWidth = 2.0;
+      ctx2d.beginPath();
+      ctx2d.moveTo(oScreen.x, oScreen.y);
+      ctx2d.lineTo(oScreen.x + rayLen * Math.cos(-theta), oScreen.y + rayLen * Math.sin(-theta));
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+  }
+
+  // 4. Data Points (Exterior points fade out & disappear in Step 3+)
+  const isRegression = (STATE.task === 'regression');
+  const valBounds = isRegression ? getDatasetValueBounds() : null;
+  STATE.data.forEach(p => {
+    const sp = toScreen2D(p.x, p.y);
+    const cls = STATE.classes.find(c => c.id === p.c) || { color: '#64748b' };
+    const ptColor = isRegression ? getColorForValue(p.val, valBounds.min, valBounds.max) : cls.color;
+    const isNeighbor = pred.nearest.some(n => n.point === p);
+
+    let alpha = 1.0;
+    if (PSEUDO_STATE.currentStep >= 3) {
+      alpha = isNeighbor ? 1.0 : Math.max(0, PSEUDO_STATE.exteriorOpacity);
+    }
+    if (alpha <= 0.005) return; // Disappeared completely!
+
+    ctx2d.save();
+    ctx2d.globalAlpha = alpha;
+
+    // Point body
+    ctx2d.beginPath();
+    ctx2d.arc(sp.x, sp.y, ptRadius, 0, Math.PI * 2);
+    ctx2d.fillStyle = ptColor;
+    ctx2d.fill();
+    ctx2d.lineWidth = 1.2;
+    ctx2d.strokeStyle = '#ffffff';
+    ctx2d.stroke();
+
+    // Hover highlight
+    if (hoveredPoint === p) {
+      ctx2d.beginPath();
+      ctx2d.arc(sp.x, sp.y, ptRadius + 3.5, 0, Math.PI * 2);
+      ctx2d.strokeStyle = ptColor;
+      ctx2d.lineWidth = 1.5;
+      ctx2d.stroke();
+    }
+
+    // Selected point halo & double ring
+    if (selectedPoint === p) {
+      ctx2d.beginPath();
+      ctx2d.arc(sp.x, sp.y, ptRadius + 6, 0, Math.PI * 2);
+      ctx2d.strokeStyle = '#0284c7';
+      ctx2d.lineWidth = 2.2;
+      ctx2d.stroke();
+
+      ctx2d.beginPath();
+      ctx2d.arc(sp.x, sp.y, ptRadius + 2.5, 0, Math.PI * 2);
+      ctx2d.strokeStyle = '#38bdf8';
+      ctx2d.lineWidth = 1.4;
+      ctx2d.stroke();
+    }
+    ctx2d.restore();
+  });
+
+  // 5. Clean highlight rings & Rank tags for nearest neighbors (Step 3+ or normal mode)
+  const showNeighborBadges = (PSEUDO_STATE.currentStep === 0 || PSEUDO_STATE.currentStep >= 3);
+  if (showNeighborBadges && pred.nearest.length > 0) {
+    ctx2d.save();
+    const badgeAlpha = (PSEUDO_STATE.currentStep === 3) ? PSEUDO_STATE.colorTransitionProgress : 1.0;
+    ctx2d.globalAlpha = Math.max(0, Math.min(1.0, badgeAlpha));
+    pred.nearest.forEach((n, idx) => {
+      const sp = toScreen2D(n.point.x, n.point.y);
+      const cls = STATE.classes.find(c => c.id === n.point.c) || { color: '#64748b' };
+      const nColor = isRegression ? getColorForValue(n.point.val, valBounds.min, valBounds.max) : cls.color;
+
+      // Elegant colored ring matching class color
+      ctx2d.beginPath();
+      ctx2d.arc(sp.x, sp.y, ptRadius + 3, 0, Math.PI * 2);
+      ctx2d.lineWidth = 1.8;
+      ctx2d.strokeStyle = nColor;
+      ctx2d.stroke();
+
+      // Rank tags (#1..#k)
+      ctx2d.font = 'bold 9px ui-monospace, Consolas, monospace';
+      ctx2d.fillStyle = '#d97706';
+      ctx2d.textAlign = 'center';
+      ctx2d.textBaseline = 'bottom';
+      ctx2d.fillText(`#${idx + 1}`, sp.x, sp.y - ptRadius - 4);
+    });
+    ctx2d.restore();
+  }
+
+  // 6. Flying Vote Energy Orbs in Step 4 (Traveling from k neighbors into Z)
+  if (PSEUDO_STATE.currentStep === 4 && PSEUDO_STATE.votingOrbs && PSEUDO_STATE.votingOrbs.length > 0) {
+    const now = performance.now();
+    ctx2d.save();
+
+    // Draw traveling vote orbs
+    PSEUDO_STATE.votingOrbs.forEach(v => {
+      if (now < v.spawnTime || v.delivered) return;
+
+      const p = v.progress;
+      const curX = v.startX + (v.targetX - v.startX) * p;
+      const curY = v.startY + (v.targetY - v.startY) * p;
+
+      // Trailing glow tail along connecting path
+      for (let i = 1; i <= 3; i++) {
+        const trailP = Math.max(0, p - i * 0.04);
+        const tx = v.startX + (v.targetX - v.startX) * trailP;
+        const ty = v.startY + (v.targetY - v.startY) * trailP;
+        ctx2d.beginPath();
+        ctx2d.arc(tx, ty, Math.max(1, 4 - i * 0.9), 0, Math.PI * 2);
+        ctx2d.fillStyle = v.color;
+        ctx2d.globalAlpha = 0.35 / i;
+        ctx2d.fill();
+      }
+
+      // Outer glow of the orb
+      ctx2d.globalAlpha = 0.95;
+      ctx2d.beginPath();
+      ctx2d.arc(curX, curY, 6.5, 0, Math.PI * 2);
+      ctx2d.fillStyle = v.color;
+      ctx2d.fill();
+
+      // White luminous core
+      ctx2d.beginPath();
+      ctx2d.arc(curX, curY, 2.6, 0, Math.PI * 2);
+      ctx2d.fillStyle = '#ffffff';
+      ctx2d.fill();
+    });
+
+    // Draw impact ripples on Z as votes enter Z
+    if (PSEUDO_STATE.impactRipples && PSEUDO_STATE.impactRipples.length > 0) {
+      PSEUDO_STATE.impactRipples.forEach(r => {
+        const elapsed = now - r.startTime;
+        const t = Math.min(1.0, elapsed / r.duration);
+        const alpha = Math.max(0, 1.0 - t);
+
+        if (r.isWinner) {
+          // Double celebratory shockwave on Z
+          const waveR1 = 12 + 36 * easeOutCubic(t);
+          const waveR2 = 12 + 22 * easeOutCubic(t);
+          ctx2d.beginPath();
+          ctx2d.arc(r.x, r.y, waveR1, 0, Math.PI * 2);
+          ctx2d.strokeStyle = r.color;
+          ctx2d.globalAlpha = alpha * 0.85;
+          ctx2d.lineWidth = 2.5;
+          ctx2d.stroke();
+
+          ctx2d.beginPath();
+          ctx2d.arc(r.x, r.y, waveR2, 0, Math.PI * 2);
+          ctx2d.strokeStyle = '#f59e0b';
+          ctx2d.globalAlpha = alpha * 0.65;
+          ctx2d.lineWidth = 1.8;
+          ctx2d.stroke();
+        } else {
+          // Normal vote arrival ripple
+          const waveR = 12 + 16 * easeOutQuad(t);
+          ctx2d.beginPath();
+          ctx2d.arc(r.x, r.y, waveR, 0, Math.PI * 2);
+          ctx2d.strokeStyle = r.color;
+          ctx2d.globalAlpha = alpha * 0.75;
+          ctx2d.lineWidth = 2.0;
+          ctx2d.stroke();
+        }
+      });
+    }
+
+    ctx2d.restore();
+  }
+
+  // 7. Query Point Z (Star marker + pulse halo)
+  const predCls = STATE.classes.find(c => c.id === pred.label);
+  const zDefaultColor = isRegression ? getColorForValue(pred.yHat, valBounds.min, valBounds.max) : (predCls ? predCls.color : '#f59e0b');
+  let zColor = zDefaultColor;
+  if (PSEUDO_STATE.currentStep === 4) {
+    zColor = (PSEUDO_STATE.winnerAnnounced) ? zDefaultColor : '#f59e0b';
+  }
+
+  ctx2d.save();
+  // Outer subtle halo (Pulsing softly in Step 1)
+  const isPulsing = (PSEUDO_STATE.currentStep === 1);
+  const haloR = isPulsing ? 14 + 4 * Math.sin(performance.now() * 0.007) : 14;
+  ctx2d.beginPath();
+  ctx2d.arc(sz.x, sz.y, haloR, 0, Math.PI * 2);
+  ctx2d.fillStyle = 'rgba(245, 158, 11, 0.2)';
+  ctx2d.fill();
+
+  // 5-pointed Star
+  star(ctx2d, sz.x, sz.y, 10.5);
+  ctx2d.fillStyle = zColor;
+  ctx2d.fill();
+  ctx2d.lineWidth = 1.3;
+  ctx2d.strokeStyle = '#000000';
+  ctx2d.stroke();
+  ctx2d.restore();
+
+  // Update Prediction UI
+  updatePredictionUI(pred);
+}
+
+/* ==========================================================
+   INTERACTION & EVENT HANDLERS (OPTIMIZED 120 FPS) (OPTIMIZED 120 FPS)
+   ========================================================== */
+
+let isPanning = false;
+let panStart = { x: 0, y: 0 };
+let hasPanMoved = false;
+let isDraggingZ = false;
+let draggingPoint = null;
+let hoveredPoint = null;
+let selectedPoint = null;
+let selectedRing3d = null;
+let dragOffset = { x: 0, y: 0 };
+
+function resizeCanvas() {
+  const v = $('viewport');
+  if (!v) return;
+  const rect = v.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  // Pre-size canvas buffer to cover full screen + sidebar width with margin
+  // so that when sidebar collapses/expands, the axes and grid lines are ALREADY rendered past the right edge!
+  const targetW = Math.max(window.innerWidth + 600, Math.round(rect.width) + 600);
+  const targetH = Math.max(window.innerHeight, Math.round(rect.height));
+  const newW = Math.round(targetW * dpr);
+  const newH = Math.round(targetH * dpr);
+
+  if (newW <= 0 || newH <= 0) return;
+  const sizeChanged = (cv2d.width !== newW || cv2d.height !== newH);
+
+  if (sizeChanged) {
+    cv2d.width = newW;
+    cv2d.height = newH;
+    cv2d.style.width = targetW + 'px';
+    cv2d.style.height = targetH + 'px';
+  }
+
+  if (STATE.origin2D.x === 0 && STATE.origin2D.y === 0) {
+    STATE.origin2D.x = rect.width / 2;
+    STATE.origin2D.y = rect.height / 2;
+  }
+
+  // Draw synchronously so the canvas buffer is never displayed blank/white
+  draw2D();
+  if (sizeChanged) {
+    scheduleRegionRefresh(80);
+  }
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// Canvas Mouse Events (Pure Vector Desmos Dragging & Panning)
+cv2d.addEventListener('pointerdown', e => {
+  
+  const rect = cv2d.getBoundingClientRect();
+  const mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const mathPos = toMath2D(mousePos.x, mousePos.y);
+
+  // Right-click: Delete point
+  if (e.button === 2) {
+    const hit = findPointNear(mousePos.x, mousePos.y);
+    if (hit) {
+      deletePoint(hit);
+    }
+    return;
+  }
+
+  if (e.button !== 0 && e.button !== 1) return;
+
+  // 1. Check if clicked on/near Query Point Z (Generous 28px grab radius)
+  const sz = toScreen2D(STATE.z.x, STATE.z.y);
+  if (Math.hypot(sz.x - mousePos.x, sz.y - mousePos.y) < 36) {
+    isDraggingZ = true;
+    dragOffset.x = STATE.z.x - mathPos.x;
+    dragOffset.y = STATE.z.y - mathPos.y;
+    cv2d.style.cursor = 'grabbing';
+    try { cv2d.setPointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
+
+  // 2. Check if clicked on/near an existing data point (Select + Drag)
+  const nearPt = findPointNear(mousePos.x, mousePos.y);
+  if (nearPt) {
+    selectedPoint = nearPt;
+    syncSelectedPointUI();
+    draggingPoint = nearPt;
+    dragOffset.x = nearPt.x - mathPos.x;
+    dragOffset.y = nearPt.y - mathPos.y;
+    cv2d.style.cursor = 'grabbing';
+    try { cv2d.setPointerCapture(e.pointerId); } catch (_) {}
+    requestDraw2D();
+    return;
+  } else {
+    // Clicked empty canvas: deselect
+    if (selectedPoint) {
+      selectedPoint = null;
+      syncSelectedPointUI();
+      requestDraw2D();
+    }
+  }
+
+  // 3. If in "Add Point" mode: Create point at exact floating-point position
+  if (STATE.tool === 'add' && e.button === 0) {
+    addPoint(mathPos.x, mathPos.y, 0, STATE.activeClass);
+    return;
+  }
+
+  // 4. Default on empty canvas: Desmos Pan (Left-click drag pans graph)
+  isPanning = true;
+  hasPanMoved = false;
+  panStart = { x: mousePos.x - STATE.origin2D.x, y: mousePos.y - STATE.origin2D.y };
+  cv2d.style.cursor = 'grabbing';
+  try { cv2d.setPointerCapture(e.pointerId); } catch (_) {}
+});
+
+cv2d.addEventListener('pointermove', e => {
+  
+  const rect = cv2d.getBoundingClientRect();
+  const mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  const mathPos = toMath2D(mousePos.x, mousePos.y);
+
+  // Update coordinate badge with adaptive precision
+  updateCoordBadge(mathPos.x, mathPos.y);
+
+  // 1. Panning coordinate axes (Ultra-smooth 120 FPS: translate cached regionCanvas)
+  if (isPanning) {
+    hasPanMoved = true;
+    STATE.origin2D.x = mousePos.x - panStart.x;
+    STATE.origin2D.y = mousePos.y - panStart.y;
+    hideTooltip();
+    requestDraw2D();
+    scheduleRegionRefresh(100);
+    return;
+  }
+
+  // 2. Dragging Query Point Z (Follow cursor & update tooltip coordinates live)
+  if (isDraggingZ) {
+    STATE.z.x = mathPos.x + dragOffset.x;
+    STATE.z.y = mathPos.y + dragOffset.y;
+    syncZInputs();
+    PSEUDO_STATE.exteriorOpacity = 1.0;
+    if (PSEUDO_STATE.currentStep > 0) {
+      updatePseudocodeUI();
+      const livePred = predictKNN([STATE.z.x, STATE.z.y]);
+      if (PSEUDO_STATE.currentStep === 4) {
+        PSEUDO_STATE.winnerAnnounced = true;
+        showStaticVoteTally(livePred);
+      }
+    }
+    cv2d.style.cursor = 'grabbing';
+    showTooltip(e.clientX, e.clientY, `<b>Điểm truy vấn Z</b><br>X: ${formatCoord(STATE.z.x)}, Y: ${formatCoord(STATE.z.y)}<br><span style="font-size:0.75rem; color:#2563eb;">Kéo thả Z</span>`);
+    requestDraw2D();
+    return;
+  }
+
+  // 3. Dragging a Training Point
+  if (draggingPoint) {
+    draggingPoint.x = mathPos.x + dragOffset.x;
+    draggingPoint.y = mathPos.y + dragOffset.y;
+    const cls = STATE.classes.find(c => c.id === draggingPoint.c) || { name: 'Unknown' };
+    const tagHtml = draggingPoint.tag ? `<br><span style="color:#94a3b8;">${draggingPoint.tag}</span>` : '';
+    cv2d.style.cursor = 'grabbing';
+    showTooltip(e.clientX, e.clientY, `<b>${cls.name}</b><br>X: ${formatCoord(draggingPoint.x)}, Y: ${formatCoord(draggingPoint.y)}${tagHtml}<br><span style="font-size:0.75rem; color:#94a3b8;">Đang di chuyển</span>`);
+    regionDirty = true;
+    requestDraw2D();
+    scheduleRegionRefresh(100);
+    return;
+  }
+
+  // 4. Hover detection & cursor feedback
+  const sz = toScreen2D(STATE.z.x, STATE.z.y);
+  const nearZ = Math.hypot(sz.x - mousePos.x, sz.y - mousePos.y) < 22;
+  const nearPt = findPointNear(mousePos.x, mousePos.y);
+  const prevHovered = hoveredPoint;
+
+  if (nearZ) {
+    hoveredPoint = null;
+    cv2d.style.cursor = 'grab';
+    syncHoveredTableRow(null);
+    showTooltip(e.clientX, e.clientY, `<b>Điểm truy vấn Z</b><br>X: ${formatCoord(STATE.z.x)}, Y: ${formatCoord(STATE.z.y)}<br><span style="font-size:0.75rem; color:#94a3b8;">Kéo để di chuyển • Phím W/A/S/D</span>`);
+  } else if (nearPt) {
+    hoveredPoint = nearPt;
+    syncHoveredTableRow(nearPt);
+    const cls = STATE.classes.find(c => c.id === nearPt.c) || { name: 'Unknown' };
+    const tagHtml = nearPt.tag ? `<br><span style="color:#94a3b8;">${nearPt.tag}</span>` : '';
+    cv2d.style.cursor = 'grab';
+    showTooltip(e.clientX, e.clientY, `<b>${cls.name}</b><br>X: ${formatCoord(nearPt.x)}, Y: ${formatCoord(nearPt.y)}${tagHtml}`);
+  } else {
+    hoveredPoint = null;
+    syncHoveredTableRow(null);
+    hideTooltip();
+    cv2d.style.cursor = (STATE.tool === 'add' ? 'crosshair' : 'default');
+  }
+
+  // Only redraw if hovered point actually changed
+  if (hoveredPoint !== prevHovered) {
+    requestDraw2D();
+  }
+});
+
+['pointerup', 'pointercancel'].forEach(ev => {
+  cv2d.addEventListener(ev, e => {
+    try { cv2d.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (isPanning) {
+      isPanning = false;
+      scheduleRegionRefresh(35);
+    }
+    if (isDraggingZ) {
+      isDraggingZ = false;
+      lastPredSignature = ''; // Force complete UI update on release
+      const finalPred = predictKNN([STATE.z.x, STATE.z.y]);
+      updatePredictionUI(finalPred);
+      scheduleElementsTableUpdate(finalPred, true);
+    }
+    draggingPoint = null;
+    cv2d.style.cursor = (STATE.tool === 'add' ? 'crosshair' : 'default');
+    hideTooltip();
+    try { cv2d.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+});
+
+cv2d.addEventListener('mouseleave', () => {
+  isPanning = false;
+  isDraggingZ = false;
+  draggingPoint = null;
+  hoveredPoint = null;
+  hideTooltip();
+});
+
+// Desmos Zoom with Mouse Wheel (Smooth scaling, debounced sharp refresh)
+cv2d.addEventListener('wheel', e => {
+  hideTooltip();
+  e.preventDefault();
+  const rect = cv2d.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const mathBefore = toMath2D(mouseX, mouseY);
+  const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+
+  STATE.scale2D = Math.max(1e-7, Math.min(1e8, STATE.scale2D * zoomFactor));
+  STATE.origin2D.x = mouseX - mathBefore.x * STATE.scale2D;
+  STATE.origin2D.y = mouseY + mathBefore.y * STATE.scale2D;
+
+  requestDraw2D();
+  scheduleRegionRefresh(80);
+}, { passive: false });
+
+// Prevent context menu for right-click delete
+cv2d.addEventListener('contextmenu', e => e.preventDefault());
+
+function findPointNear(sx, sy, maxDist = 12) {
+  for (let i = STATE.data.length - 1; i >= 0; i--) {
+    const p = STATE.data[i];
+    const sp = toScreen2D(p.x, p.y);
+    if (Math.hypot(sp.x - sx, sp.y - sy) <= maxDist) {
+      return p;
+    }
+  }
+  return null;
+}
+
+function addPoint(x, y, z, c) {
+  const pt = { id: Date.now() + Math.random(), x: +x, y: +y, z: +(z || 0), c };
+  STATE.data.push(pt);
+  regionDirty = true;
+  updateUI();
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+}
+
+function deletePoint(pt) {
+  const idx = STATE.data.indexOf(pt);
+  if (idx !== -1) {
+    if (selectedPoint === pt) selectedPoint = null;
+    STATE.data.splice(idx, 1);
+    regionDirty = true;
+    updateUI();
+    scheduleRegionRefresh(0);
+    requestDraw2D();
+    showToast('Đã xóa điểm');
+  }
+}
+
+
+
+/* ==========================================================
+   ELEMENTS TABLE & CLASS INSPECTION
+   ========================================================== */
+
+let elemFilterClass = 'all'; // 'all' or class ID
+let elemSearchQuery = '';
+let elemSortBy = 'id'; // 'id', 'dist', 'class'
+let lastKNNPred = null;
+
+// ==========================================================
+// DATASET FIELD EXTRACTION & POPUP CONTROLLERS
+// ==========================================================
+
+function getDatasetFieldInfo() {
+  if (STATE.preset === 'reg_house') {
+    return {
+      name1: 'Diện tích',
+      name2: 'Vị trí',
+      format1: p => `${p.x} m²`,
+      format2: p => `${p.y.toFixed(1)}/10`
+    };
+  }
+  if (STATE.preset === 'reg_auto') {
+    return {
+      name1: 'Mã lực',
+      name2: 'Trọng lượng',
+      format1: p => `${p.x} HP`,
+      format2: p => `${p.y.toFixed(2)} tấn`
+    };
+  }
+  if (STATE.preset === 'reg_sine') {
+    return {
+      name1: 'Trục X',
+      name2: 'Trục Y',
+      format1: p => p.x.toFixed(2),
+      format2: p => p.y.toFixed(2)
+    };
+  }
+  if (STATE.preset === 'realestate' || (STATE.data[0]?.tag && STATE.data[0].tag.includes('m²'))) {
+    return {
+      name1: 'Diện tích',
+      name2: 'Giá bán',
+      format1: p => `${p.x} m²`,
+      format2: p => `${(p.y / 10).toFixed(1)} tỷ`
+    };
+  }
+  if (STATE.preset === 'student' || (STATE.data[0]?.tag && STATE.data[0].tag.includes('SV'))) {
+    return {
+      name1: 'Giờ học',
+      name2: 'Điểm thi',
+      format1: p => `${p.x.toFixed(1)}h`,
+      format2: p => `${p.y.toFixed(1)}đ`
+    };
+  }
+  if (STATE.isMultiDim) {
+    const colX = STATE.columnNames[STATE.axes.x] || 'Trục X';
+    const colY = STATE.columnNames[STATE.axes.y] || 'Trục Y';
+    return {
+      name1: colX,
+      name2: colY,
+      format1: p => `${p.x.toFixed(1)} cm`,
+      format2: p => `${p.y.toFixed(1)} cm`
+    };
+  }
+  return {
+    name1: 'Tọa độ X',
+    name2: 'Tọa độ Y',
+    format1: p => p.x.toFixed(2),
+    format2: p => p.y.toFixed(2)
+  };
+}
+
+let topPopupZIndex = 120;
+function bringPopupToFront(popupEl) {
+  topPopupZIndex++;
+  popupEl.style.zIndex = topPopupZIndex;
+}
+
+function makePopupDraggable(popupEl, headerEl) {
+  let isDragging = false;
+  let offsetX = 0, offsetY = 0;
+  const viewport = $('viewport');
+
+  headerEl.addEventListener('pointerdown', e => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    isDragging = true;
+    const vRect = viewport ? viewport.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    const rect = popupEl.getBoundingClientRect();
+    // Anchor cursor offset relative to popup top-left
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    popupEl.style.position = 'absolute';
+    popupEl.style.left = `${rect.left - vRect.left}px`;
+    popupEl.style.top = `${rect.top - vRect.top}px`;
+    popupEl.style.right = 'auto';
+    popupEl.style.bottom = 'auto';
+    popupEl.style.margin = '0';
+
+    headerEl.setPointerCapture(e.pointerId);
+    headerEl.style.cursor = 'grabbing';
+    bringPopupToFront(popupEl);
+  });
+
+  headerEl.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const vRect = viewport ? viewport.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    const maxLeft = Math.max(0, vRect.width - 60);
+    const maxTop = Math.max(0, vRect.height - 40);
+    const newLeft = Math.max(0, Math.min(maxLeft, e.clientX - vRect.left - offsetX));
+    const newTop = Math.max(0, Math.min(maxTop, e.clientY - vRect.top - offsetY));
+    popupEl.style.left = `${newLeft}px`;
+    popupEl.style.top = `${newTop}px`;
+  });
+
+  const stopDrag = e => {
+    if (isDragging) {
+      isDragging = false;
+      headerEl.style.cursor = 'grab';
+      try { headerEl.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  };
+  headerEl.addEventListener('pointerup', stopDrag);
+  headerEl.addEventListener('pointercancel', stopDrag);
+
+  popupEl.addEventListener('pointerdown', () => bringPopupToFront(popupEl));
+}
+
+function togglePopupCollapse(popupEl, btnEl) {
+  if (!popupEl) return;
+  const isCollapsed = popupEl.classList.contains('collapsed');
+  if (isCollapsed) {
+    popupEl.classList.remove('collapsed');
+    if (popupEl.dataset.savedHeight) {
+      popupEl.style.height = popupEl.dataset.savedHeight;
+    }
+    if (popupEl.dataset.savedMinHeight) {
+      popupEl.style.minHeight = popupEl.dataset.savedMinHeight;
+    }
+    if (btnEl) {
+      btnEl.textContent = '−';
+      btnEl.title = 'Thu gọn bảng';
+    }
+  } else {
+    popupEl.dataset.savedHeight = popupEl.style.height || (popupEl.offsetHeight + 'px');
+    popupEl.dataset.savedMinHeight = popupEl.style.minHeight || '';
+    popupEl.classList.add('collapsed');
+    popupEl.style.height = '';
+    popupEl.style.minHeight = '';
+    if (btnEl) {
+      btnEl.textContent = '+';
+      btnEl.title = 'Mở rộng bảng';
+    }
+  }
+}
+
+function attachHeaderDblClickCollapse(headerEl, popupEl, btnEl) {
+  if (!headerEl || !popupEl) return;
+  headerEl.addEventListener('dblclick', e => {
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+    togglePopupCollapse(popupEl, btnEl);
+  });
+}
+
+function initElementsTableUI() {
+  const searchInput = $('elem-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      elemSearchQuery = e.target.value.trim().toLowerCase();
+      updateElementsTable(lastKNNPred);
+    });
+  }
+
+  const sortSelect = $('elem-sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', e => {
+      elemSortBy = e.target.value;
+      updateElementsTable(lastKNNPred);
+    });
+  }
+
+  // Helper for setting up draggable, collapsible popups with bottom pill toggles & close buttons
+  function setupPopupBox(popupId, headerId, btnCollapseId, btnCloseId, pillToggleId) {
+    const popup = $(popupId);
+    const header = $(headerId);
+    const btnCollapse = $(btnCollapseId);
+    const btnClose = $(btnCloseId);
+    const pillToggle = $(pillToggleId);
+
+    if (popup && header) {
+      makePopupDraggable(popup, header);
+      if (btnCollapse) {
+        btnCollapse.addEventListener('click', e => {
+          e.stopPropagation();
+          togglePopupCollapse(popup, btnCollapse);
+        });
+      }
+      attachHeaderDblClickCollapse(header, popup, btnCollapse);
+    }
+
+    if (pillToggle && popup) {
+      pillToggle.addEventListener('click', () => {
+        const isHidden = (popup.style.display === 'none');
+        if (isHidden) {
+          popup.style.display = 'flex';
+          pillToggle.classList.add('active');
+          bringPopupToFront(popup);
+        } else {
+          if (popup.classList.contains('collapsed')) {
+            togglePopupCollapse(popup, btnCollapse);
+          } else {
+            popup.style.display = 'none';
+            pillToggle.classList.remove('active');
+          }
+        }
+      });
+    }
+
+    if (btnClose && popup) {
+      btnClose.addEventListener('click', () => {
+        popup.style.display = 'none';
+        if (pillToggle) pillToggle.classList.remove('active');
+      });
+    }
+  }
+
+  // Setup Popup 0: Prediction Result & Point Z
+  const popupPrediction = $('popup-prediction');
+  const headerPrediction = $('popup-prediction-header');
+  const btnCollapsePrediction = $('btn-collapse-prediction');
+  if (popupPrediction && headerPrediction) {
+    makePopupDraggable(popupPrediction, headerPrediction);
+    if (btnCollapsePrediction) {
+      btnCollapsePrediction.addEventListener('click', e => {
+        e.stopPropagation();
+        togglePopupCollapse(popupPrediction, btnCollapsePrediction);
+      });
+    }
+    attachHeaderDblClickCollapse(headerPrediction, popupPrediction, btnCollapsePrediction);
+  }
+
+  // Setup Popups 1-5 with bottom toggle pills
+  setupPopupBox('popup-tools', 'popup-tools-header', 'btn-collapse-tools', 'btn-close-tools', 'pill-toggle-tools');
+  setupPopupBox('popup-params', 'popup-params-header', 'btn-collapse-params', 'btn-close-params', 'pill-toggle-params');
+  setupPopupBox('popup-pseudocode-runner', 'popup-pseudocode-runner-header', 'btn-collapse-pseudocode-runner', 'btn-close-pseudocode-runner', 'pill-toggle-pseudocode');
+  setupPopupBox('popup-nearest', 'popup-nearest-header', 'btn-collapse-nearest', 'btn-close-nearest', 'pill-toggle-nearest');
+  setupPopupBox('popup-elements', 'popup-elements-header', 'btn-collapse-elements', 'btn-close-elements', 'pill-toggle-elements');
+
+  // Setup Popup: Vote Tally HUD (Step 4 Pseudocode)
+  const popupTally = $('canvas-vote-tally');
+  const headerTally = $('tally-header-title');
+  const btnCollapseTally = $('btn-collapse-tally');
+  const btnCloseTally = $('btn-close-tally');
+
+  if (popupTally && headerTally) {
+    makePopupDraggable(popupTally, headerTally);
+    if (btnCollapseTally) {
+      btnCollapseTally.addEventListener('click', e => {
+        e.stopPropagation();
+        togglePopupCollapse(popupTally, btnCollapseTally);
+      });
+    }
+    if (btnCloseTally) {
+      btnCloseTally.addEventListener('click', () => {
+        popupTally.style.display = 'none';
+      });
+    }
+    attachHeaderDblClickCollapse(headerTally, popupTally, btnCollapseTally);
+  }
+}
+
+function getNeighborInfoHtml(p) {
+  // 1. Iris dataset (4 dimensions: Sepal & Petal)
+  if (p.raw && Array.isArray(p.raw) && p.raw.length >= 4) {
+    const sl = p.raw[0], sw = p.raw[1], pl = p.raw[2], pw = p.raw[3];
+    return `<span title="Dài đài: ${sl}cm, Rộng đài: ${sw}cm | Dài cánh: ${pl}cm, Rộng cánh: ${pw}cm">Đài ${sl}×${sw} • Cánh ${pl}×${pw}</span>`;
+  }
+
+  // 2. Pass / Fail preset (Study hours & Exam grade)
+  if (p.tag && p.tag.includes('SV')) {
+    const match = p.tag.match(/SV\s+([\d.]+)h,\s+([\d.]+)đ/);
+    if (match) {
+      return `Ôn ${match[1]}h • Thi ${match[2]}đ`;
+    }
+    return p.tag;
+  }
+
+  // 3. Real Estate preset (Area in m² & Price in billion VNĐ)
+  if (p.tag && p.tag.includes('m²')) {
+    return p.tag.replace(' (Cao cấp)', '').replace(',', ' •');
+  }
+
+  // 4. Customer Income preset (legacy fallback)
+  if (p.tag && p.tag.includes('tuổi')) {
+    return p.tag.replace(' (VIP)', '').replace(',', ' •');
+  }
+
+  // 4. Custom tag if present
+  if (p.tag) {
+    return p.tag;
+  }
+
+  // 5. 3D Clusters
+  if (STATE.mode === '3d' || (p.z !== undefined && p.z !== 0)) {
+    return `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${(p.z || 0).toFixed(1)})`;
+  }
+
+  // 6. Standard 2D
+  return `X: ${p.x.toFixed(2)}, Y: ${p.y.toFixed(2)}`;
+}
+
+function syncSelectedPointUI() {
+  const targetId = selectedPoint ? selectedPoint.id : null;
+  document.querySelectorAll('.elem-row-item, .nb-row-item').forEach(tr => {
+    const isSel = targetId !== null && tr.dataset.id == targetId;
+    tr.classList.toggle('selected-row', isSel);
+  });
+  
+}
+
+
+let lastHoveredPointId = null;
+function syncHoveredTableRow(point) {
+  const targetId = point ? point.id : null;
+  if (targetId === lastHoveredPointId) return;
+
+  if (lastHoveredPointId !== null) {
+    const prevRows = document.querySelectorAll(`[data-id="${lastHoveredPointId}"]`);
+    prevRows.forEach(r => r.classList.remove('highlighted'));
+  }
+  if (targetId !== null) {
+    const newRows = document.querySelectorAll(`[data-id="${targetId}"]`);
+    newRows.forEach(r => r.classList.add('highlighted'));
+  }
+  lastHoveredPointId = targetId;
+}
+
+
+function focusPoint(p) {
+  if (STATE.mode === '2d') {
+    const dpr = window.devicePixelRatio || 1;
+    STATE.origin2D.x = (cv2d.width / dpr) / 2 - p.x * STATE.scale2D;
+    STATE.origin2D.y = (cv2d.height / dpr) / 2 + p.y * STATE.scale2D;
+    hoveredPoint = p;
+    syncHoveredTableRow(p);
+    requestDraw2D();
+    scheduleRegionRefresh(60);
+  }
+  const cls = STATE.classes.find(c => c.id === p.c) || { name: 'Unknown' };
+  showToast(`Đã định vị phần tử #${p.id + 1} (${cls.name})`);
+}
+
+let elemTableTimer = null;
+let lastElemTableTime = 0;
+
+function scheduleElementsTableUpdate(pred, immediate = false) {
+  if (isDraggingZ && !immediate) return;
+  const now = performance.now();
+  if (immediate || now - lastElemTableTime > 250) {
+    lastElemTableTime = now;
+    if (elemTableTimer) { clearTimeout(elemTableTimer); elemTableTimer = null; }
+    updateElementsTable(pred);
+    return;
+  }
+  if (!elemTableTimer) {
+    elemTableTimer = setTimeout(() => {
+      elemTableTimer = null;
+      lastElemTableTime = performance.now();
+      updateElementsTable(pred);
+    }, 150);
+  }
+}
+
+function updateElementsTable(pred) {
+  if (!pred) {
+    pred = predictKNN([STATE.z.x, STATE.z.y, STATE.z.z || 0]);
+  }
+  lastKNNPred = pred;
+  if (PSEUDO_STATE.currentStep === 4) {
+    showStaticVoteTally(pred);
+  }
+
+  const totalPts = STATE.data.length;
+  const countBadge = $('elem-total-badge');
+  if (countBadge) countBadge.textContent = `${totalPts} phần tử`;
+  const pillPts = $('pill-total-pts');
+  if (pillPts) pillPts.textContent = totalPts;
+
+  // Compute distance map from pred
+  const distMap = new Map();
+  if (pred && pred.distances) {
+    pred.distances.forEach((d, rIdx) => {
+      distMap.set(d.point.id, {
+        dist: d.dist,
+        rank: rIdx + 1,
+        isNearest: rIdx < STATE.k
+      });
+    });
+  }
+
+  // 1. Render Class Filter Tabs (Sidebar & Modal)
+  const renderClassTabs = containerId => {
+    const container = $(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    // 'Tất cả' tab
+    const allBtn = document.createElement('button');
+    allBtn.className = `elem-tab-btn ${elemFilterClass === 'all' ? 'active' : ''}`;
+    allBtn.innerHTML = `<span>Tất cả</span><span style="opacity:0.75; font-size:0.65rem;">(${totalPts})</span>`;
+    allBtn.onclick = () => {
+      elemFilterClass = 'all';
+      updateElementsTable(lastKNNPred);
+    };
+    container.appendChild(allBtn);
+
+    // Each class tab
+    STATE.classes.forEach(c => {
+      const cnt = STATE.data.filter(p => p.c === c.id).length;
+      const btn = document.createElement('button');
+      btn.className = `elem-tab-btn ${elemFilterClass === c.id ? 'active' : ''}`;
+      btn.innerHTML = `<span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:${c.color};"></span><span>${c.name}</span><span style="opacity:0.75; font-size:0.65rem;">(${cnt})</span>`;
+      btn.onclick = () => {
+        elemFilterClass = c.id;
+        updateElementsTable(lastKNNPred);
+      };
+      container.appendChild(btn);
+    });
+  };
+
+  renderClassTabs('elem-class-tabs');
+  renderClassTabs('modal-class-tabs');
+
+  // Modal header subtitle & footer summary stats
+  const modalSub = $('modal-elem-subtitle');
+  if (modalSub) {
+    modalSub.textContent = `${totalPts} phần tử • ${STATE.classes.length} lớp • 2D DESMOS`;
+  }
+
+  const modalStats = $('modal-stats-summary');
+  if (modalStats) {
+    const parts = [`<b>Tổng số:</b> ${totalPts} phần tử`];
+    STATE.classes.forEach(c => {
+      const cnt = STATE.data.filter(p => p.c === c.id).length;
+      const pct = totalPts > 0 ? ((cnt / totalPts) * 100).toFixed(1) : '0.0';
+      parts.push(`<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${c.color};"></span><b>${c.name}:</b> ${cnt} (${pct}%)</span>`);
+    });
+    modalStats.innerHTML = parts.join(' &nbsp;•&nbsp; ');
+  }
+
+  // 2. Filter & Sort Points
+  let list = STATE.data.slice();
+
+  // Class filter
+  if (elemFilterClass !== 'all') {
+    list = list.filter(p => p.c === elemFilterClass);
+  }
+
+  // Search filter
+  if (elemSearchQuery) {
+    list = list.filter(p => {
+      const cls = STATE.classes.find(c => c.id === p.c);
+      const clsName = cls ? cls.name.toLowerCase() : '';
+      const tagStr = (p.tag || '').toLowerCase();
+      const coordStr = `${p.x} ${p.y} ${p.z || ''}`.toLowerCase();
+      const idStr = String(p.id + 1);
+      return idStr.includes(elemSearchQuery) ||
+             clsName.includes(elemSearchQuery) ||
+             tagStr.includes(elemSearchQuery) ||
+             coordStr.includes(elemSearchQuery);
+    });
+  }
+
+  // Sort
+  if (elemSortBy === 'dist') {
+    list.sort((a, b) => {
+      const da = distMap.get(a.id) ? distMap.get(a.id).dist : Infinity;
+      const db = distMap.get(b.id) ? distMap.get(b.id).dist : Infinity;
+      return da - db;
+    });
+  } else if (elemSortBy === 'class') {
+    list.sort((a, b) => a.c - b.c || a.id - b.id);
+  } else {
+    list.sort((a, b) => a.id - b.id);
+  }
+
+  // 3. Render Elements Table in Floating Popup (Modern unified styling)
+  const info = getDatasetFieldInfo();
+  const elemThCol1 = $('elem-th-col1');
+  const elemThCol2 = $('elem-th-col2');
+  if (elemThCol1) elemThCol1.textContent = info.name1;
+  if (elemThCol2) elemThCol2.textContent = info.name2;
+
+  const tbody = $('elem-tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">Không có phần tử phù hợp</td></tr>`;
+    } else {
+      list.forEach(p => {
+        const cls = STATE.classes.find(c => c.id === p.c) || { name: '?', color: '#64748b' };
+        const dInfo = distMap.get(p.id) || { dist: 0, rank: 999, isNearest: false };
+        const val1 = info.format1(p);
+        const val2 = info.format2(p);
+
+        const tr = document.createElement('tr');
+        tr.className = `elem-row-item ${dInfo.isNearest ? 'top-k-row' : ''} ${hoveredPoint === p ? 'highlighted' : ''}`;
+        tr.dataset.id = p.id;
+        tr.title = `Mẫu #${p.id + 1} - Nhấp để định vị trên đồ thị`;
+
+        tr.innerHTML = `
+          <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
+          <td>
+            <span class="class-chip-tag" style="background:${cls.color}18; color:${cls.color}; border:1px solid ${cls.color}44;">
+              <span class="class-chip-dot" style="background:${cls.color};"></span>
+              ${cls.name}
+            </span>
+          </td>
+          <td class="feat-val">${val1}</td>
+          <td class="feat-val">${val2}</td>
+          <td>
+            ${dInfo.isNearest ? `<span class="badge-rank">#${dInfo.rank}</span>` : ''}
+            <span class="dist-val">${dInfo.dist.toFixed(3)}</span>
+          </td>
+        `;
+
+        tr.onmouseenter = () => {
+          hoveredPoint = p;
+          syncHoveredTableRow(p);
+          requestDraw2D();
+        };
+        tr.onmouseleave = () => {
+          if (hoveredPoint === p) {
+            hoveredPoint = null;
+            syncHoveredTableRow(null);
+            requestDraw2D();
+          }
+        };
+        tr.onclick = () => {
+          focusPoint(p);
+        };
+
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  // 4. Render Wide Table (Modal)
+  const modalThead = $('modal-elem-thead');
+  const modalTbody = $('modal-elem-tbody');
+  if (modalThead && modalTbody) {
+    const isIris = STATE.isMultiDim && Array.isArray(STATE.data[0]?.raw);
+
+    if (isIris) {
+      modalThead.innerHTML = `
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Loài hoa</th>
+          <th>Dài đài hoa (cm)</th>
+          <th>Rộng đài hoa (cm)</th>
+          <th>Dài cánh hoa (cm)</th>
+          <th>Rộng cánh hoa (cm)</th>
+          <th>Khoảng cách d(Z)</th>
+          <th>Xếp hạng k-NN</th>
+          <th style="text-align:center; width:90px;">Thao tác</th>
+        </tr>
+      `;
+    } else {
+      modalThead.innerHTML = `
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Lớp</th>
+          <th>Thuộc tính X</th>
+          <th>Thuộc tính Y</th>
+          <th>Thông tin ghi chú</th>
+          <th>Khoảng cách d(Z)</th>
+          <th>Xếp hạng k-NN</th>
+          <th style="text-align:center; width:90px;">Thao tác</th>
+        </tr>
+      `;
+    }
+
+    modalTbody.innerHTML = '';
+    if (list.length === 0) {
+      modalTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:20px;">Không có phần tử phù hợp</td></tr>`;
+    } else {
+      list.forEach(p => {
+        const cls = STATE.classes.find(c => c.id === p.c) || { name: '?', color: '#64748b' };
+        const dInfo = distMap.get(p.id) || { dist: 0, rank: 999, isNearest: false };
+
+        const tr = document.createElement('tr');
+        tr.className = `elem-row-item ${dInfo.isNearest ? 'top-k-row' : ''} ${hoveredPoint === p ? 'highlighted' : ''}`;
+        tr.dataset.id = p.id;
+
+        if (isIris) {
+          const raw = p.raw || [p.x, p.y, 0, 0];
+          tr.innerHTML = `
+            <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
+            <td><span class="elem-tag-pill" style="background:${cls.color};">${cls.name}</span></td>
+            <td>${raw[0].toFixed(1)}</td>
+            <td>${raw[1].toFixed(1)}</td>
+            <td>${raw[2].toFixed(1)}</td>
+            <td>${raw[3].toFixed(1)}</td>
+            <td><b>${dInfo.dist.toFixed(3)}</b></td>
+            <td>${dInfo.isNearest ? `<span class="top-k-badge">Top ${dInfo.rank}</span>` : `<span style="color:#94a3b8;">#${dInfo.rank}</span>`}</td>
+            <td style="text-align:center; white-space:nowrap;">
+              <button class="elem-btn-action btn-focus" title="Định vị">Focus</button>
+              <button class="elem-btn-action btn-del" title="Xóa">Xóa</button>
+            </td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
+            <td><span class="elem-tag-pill" style="background:${cls.color};">${cls.name}</span></td>
+            <td>${p.x.toFixed(2)}</td>
+            <td>${p.y.toFixed(2)}</td>
+            <td>${p.tag || '-'}</td>
+            <td><b>${dInfo.dist.toFixed(3)}</b></td>
+            <td>${dInfo.isNearest ? `<span class="top-k-badge">Top ${dInfo.rank}</span>` : `<span style="color:#94a3b8;">#${dInfo.rank}</span>`}</td>
+            <td style="text-align:center; white-space:nowrap;">
+              <button class="elem-btn-action btn-focus" title="Định vị">Focus</button>
+              <button class="elem-btn-action btn-del" title="Xóa">Xóa</button>
+            </td>
+          `;
+        }
+
+        tr.onmouseenter = () => {
+          hoveredPoint = p;
+          syncHoveredTableRow(p);
+          requestDraw2D();
+          
+        };
+        tr.onmouseleave = () => {
+          if (hoveredPoint === p) {
+            hoveredPoint = null;
+            syncHoveredTableRow(null);
+            requestDraw2D();
+            
+          }
+        };
+        tr.querySelector('.btn-focus').onclick = e => {
+          e.stopPropagation();
+          focusPoint(p);
+        };
+        tr.querySelector('.btn-del').onclick = e => {
+          e.stopPropagation();
+          deletePoint(p);
+        };
+
+        modalTbody.appendChild(tr);
+      });
+    }
+  }
+}
+
+/* ==========================================================
+   UI UPDATES & PREDICTION CARD
+   ========================================================== */
+
+let lastPredSignature = '';
+let lastTableUpdateTime = 0;
+function updatePredictionUI(pred) {
+  const isRegression = (STATE.task === 'regression');
+  const badge = $('pred-badge');
+  const cls = STATE.classes.find(c => c.id === pred.label);
+
+  if (isRegression) {
+    badge.textContent = `ŷ = ${pred.yHat.toFixed(2)}`;
+    badge.style.background = getColorForValue(pred.yHat);
+  } else if (cls && pred.label !== -1) {
+    badge.textContent = cls.name;
+    badge.style.background = cls.color;
+  } else {
+    badge.textContent = 'Chưa xác định';
+    badge.style.background = '#64748b';
+  }
+
+  // Radius badge
+  if (STATE.metric === 'cosine') {
+    const zNorm = Math.hypot(STATE.z.x, STATE.z.y);
+    if (zNorm < 1e-4) {
+      $('radius-badge').textContent = 'Z=(0,0,0) (Chưa xác định hướng)';
+    } else {
+      const thetaDeg = (Math.acos(Math.max(-1, Math.min(1, 1 - pred.r))) * 180 / Math.PI).toFixed(1);
+      $('radius-badge').textContent = `R = ${pred.r.toFixed(3)} (θ ≈ ${thetaDeg}°)`;
+    }
+  } else {
+    $('radius-badge').textContent = `R = ${pred.r.toFixed(3)}`;
+  }
+
+  // While dragging Z, throttle heavy DOM table rebuilds to max once every 100ms
+  const now = performance.now();
+  if (isDraggingZ && now - lastTableUpdateTime < 100) {
+    return;
+  }
+  lastTableUpdateTime = now;
+
+  // Cache signature: if prediction outcome and nearest set are identical, skip heavy DOM rebuild
+  const nearestIds = pred.nearest.map(n => n.point.id + ':' + n.dist.toFixed(2)).join(',');
+  const predSignature = `${STATE.k}|${STATE.metric}|${STATE.weighting}|${STATE.norm}|${pred.label}|${nearestIds}`;
+  if (predSignature === lastPredSignature) {
+    return;
+  }
+  lastPredSignature = predSignature;
+
+  // Vote bars (Classification) or Value Gauge (Regression)
+  const barsContainer = $('votes-bars');
+  barsContainer.innerHTML = '';
+  if (isRegression) {
+    const valBounds = getDatasetValueBounds();
+    const pct = ((pred.yHat - valBounds.min) / ((valBounds.max - valBounds.min) || 1) * 100).toFixed(1);
+    const color = getColorForValue(pred.yHat);
+    const methodStr = STATE.weighting ? 'Trọng số khoảng cách (1/d)' : 'Trung bình cộng k láng giềng';
+    barsContainer.innerHTML = `
+      <div class="vote-item" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px;">
+        <div class="vote-label-row" style="font-size:0.8rem; margin-bottom:4px;">
+          <span style="font-weight:600; color:#334155;">Giá trị mục tiêu ước lượng (ŷ)</span>
+          <span style="font-weight:700; color:${color}; font-size:0.95rem;">${pred.yHat.toFixed(2)}</span>
+        </div>
+        <div class="progress-track" style="height:8px; margin:4px 0 6px 0;">
+          <div class="progress-fill" style="width: ${Math.max(0, Math.min(100, pct))}%; background: ${color};"></div>
+        </div>
+        <div style="font-size:0.72rem; color:#64748b; display:flex; justify-content:space-between;">
+          <span>Min: ${valBounds.min.toFixed(1)}</span>
+          <span style="font-style:italic;">${methodStr}</span>
+          <span>Max: ${valBounds.max.toFixed(1)}</span>
+        </div>
+      </div>
+    `;
+  } else {
+    const totalScore = STATE.classes.reduce((sum, c) => {
+      return sum + (STATE.weighting ? (pred.weights[c.id] || 0) : (pred.votes[c.id] || 0));
+    }, 0);
+
+    STATE.classes.forEach(c => {
+      const score = STATE.weighting ? (pred.weights[c.id] || 0) : (pred.votes[c.id] || 0);
+      const pct = totalScore > 0 ? (score / totalScore * 100).toFixed(1) : '0.0';
+      const row = document.createElement('div');
+      row.className = 'vote-item';
+      row.innerHTML = `
+        <div class="vote-label-row">
+          <span>${c.name}</span>
+          <span>${STATE.weighting ? score.toFixed(2) : score + ' phiếu'} (${pct}%)</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: ${pct}%; background: ${c.color};"></div>
+        </div>
+      `;
+      barsContainer.appendChild(row);
+    });
+  }
+
+  // Nearest neighbors table in Floating Popup (Modern unified styling with separated fields)
+  const info = getDatasetFieldInfo();
+  const nbThCol1 = $('nb-th-col1');
+  const nbThCol2 = $('nb-th-col2');
+  if (nbThCol1) nbThCol1.textContent = info.name1;
+  if (nbThCol2) nbThCol2.textContent = info.name2;
+
+  const popupK = $('popup-k-badge');
+  if (popupK) popupK.textContent = `k = ${STATE.k}`;
+  const pillK = $('pill-k-text');
+  if (pillK) pillK.textContent = `Số láng giềng K = ${STATE.k}`;
+
+  const tbody = $('nb-tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    pred.nearest.forEach((n, idx) => {
+      const nCls = STATE.classes.find(c => c.id === n.point.c) || { name: '?', color: '#64748b' };
+      const val1 = info.format1(n.point);
+      const val2 = info.format2(n.point);
+      const chipColor = isRegression ? getColorForValue(n.point.val) : nCls.color;
+      const chipText = isRegression ? `Giá trị: ${n.point.val}` : nCls.name;
+
+      const tr = document.createElement('tr');
+      tr.className = `nb-row-item ${hoveredPoint === n.point ? 'highlighted' : ''}`;
+      tr.dataset.id = n.point.id;
+      tr.title = `Mẫu #${n.point.id + 1} - Nhấp để định vị trên đồ thị`;
+
+      tr.innerHTML = `
+        <td style="color:#64748b; font-weight:600;"><span class="badge-rank">#${idx + 1}</span></td>
+        <td>
+          <span class="class-chip-tag" style="background:${chipColor}18; color:${chipColor}; border:1px solid ${chipColor}44;">
+            <span class="class-chip-dot" style="background:${chipColor};"></span>
+            ${chipText}
+          </span>
+        </td>
+        <td class="feat-val">${val1}</td>
+        <td class="feat-val">${val2}</td>
+        <td class="dist-val">${n.dist.toFixed(3)}</td>
+      `;
+
+      tr.onmouseenter = () => {
+        hoveredPoint = n.point;
+        syncHoveredTableRow(n.point);
+        requestDraw2D();
+      };
+      tr.onmouseleave = () => {
+        if (hoveredPoint === n.point) {
+          hoveredPoint = null;
+          syncHoveredTableRow(null);
+          requestDraw2D();
+        }
+      };
+      tr.onclick = () => {
+        focusPoint(n.point);
+      };
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  if ($('points-total-badge')) $('points-total-badge').textContent = `${STATE.data.length} điểm`;
+  if ($('pill-total-pts')) $('pill-total-pts').textContent = STATE.data.length;
+  scheduleElementsTableUpdate(pred);
+}
+
+function syncZInputs() {
+  const scale = STATE.scale2D || 60;
+  if ($('zx-input')) $('zx-input').value = formatCoord(STATE.z.x, scale);
+  if ($('zy-input')) $('zy-input').value = formatCoord(STATE.z.y, scale);
+}
+
+function updateUI() {
+  // Update class palette
+  const pal = $('class-palette');
+  pal.innerHTML = '';
+
+  STATE.classes.forEach(c => {
+    const count = STATE.data.filter(p => p.c === c.id).length;
+    const chip = document.createElement('div');
+    chip.className = `class-chip ${STATE.activeClass === c.id ? 'active' : ''}`;
+    chip.innerHTML = `
+      <span class="color-dot" style="background:${c.color};"></span>
+      <span>${c.name}</span>
+      <span class="class-count">${count}</span>
+    `;
+    chip.onclick = () => {
+      STATE.activeClass = c.id;
+      updateUI();
+    };
+    pal.appendChild(chip);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-class-btn';
+  addBtn.textContent = '+ Lớp mới';
+  addBtn.onclick = () => {
+    const nextId = STATE.classes.length;
+    const color = COLOR_PALETTE[nextId % COLOR_PALETTE.length];
+    STATE.classes.push({ id: nextId, name: `Lớp ${nextId}`, color });
+    STATE.activeClass = nextId;
+    updateUI();
+    showToast(`Đã thêm Lớp ${nextId}`);
+  };
+  pal.appendChild(addBtn);
+
+
+  // Sync tool buttons
+  $('tool-move').classList.toggle('active', STATE.tool === 'move');
+  $('tool-add').classList.toggle('active', STATE.tool === 'add');
+
+  // Sync parameters
+  $('k-slider').value = STATE.k;
+  $('k-val').textContent = `k = ${STATE.k}`;
+  if ($('pill-k-text')) $('pill-k-text').textContent = `Số láng giềng K = ${STATE.k}`;
+  if ($('popup-k-badge')) $('popup-k-badge').textContent = `k = ${STATE.k}`;
+  $('toggle-weights').checked = STATE.weighting;
+  $('toggle-norm').checked = STATE.norm;
+  $('toggle-regions').checked = STATE.showRegions;
+
+  document.querySelectorAll('#metric-grid .metric-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.metric === STATE.metric);
+  });
+
+  syncZInputs();
+  updateElementsTable();
+}
+
+/* ==========================================================
+   DATA PRESETS & DATA GENERATION
+   ========================================================== */
+
+
+
+function generateMoons(n = 90, noise = 0.08) {
+  const pts = [];
+  const half = Math.floor(n / 2);
+  for (let i = 0; i < half; i++) {
+    const angle = (Math.PI * i) / half;
+    const x = Math.cos(angle) * 3 + (Math.random() - 0.5) * noise * 6;
+    const y = Math.sin(angle) * 3 + (Math.random() - 0.5) * noise * 6;
+    pts.push({ id: pts.length, x: +x.toFixed(2), y: +y.toFixed(2), z: 0, c: 0 });
+  }
+  for (let i = 0; i < half; i++) {
+    const angle = (Math.PI * i) / half;
+    const x = 3 - Math.cos(angle) * 3 + (Math.random() - 0.5) * noise * 6;
+    const y = 1.5 - Math.sin(angle) * 3 + (Math.random() - 0.5) * noise * 6;
+    pts.push({ id: pts.length, x: +x.toFixed(2), y: +y.toFixed(2), z: 0, c: 1 });
+  }
+  return pts;
+}
+
+function generateBlobs(n = 90) {
+  const pts = [];
+  const centers = [
+    { x: -3.5, y: -2, z: -1, c: 0 },
+    { x: 3.5, y: 3, z: 2, c: 1 },
+    { x: -1.5, y: 3.5, z: 0, c: 2 }
+  ];
+  centers.forEach(center => {
+    for (let i = 0; i < Math.floor(n / 3); i++) {
+      const u1 = Math.random(), u2 = Math.random();
+      const randStd = Math.sqrt(-2 * Math.log(u1 || 1e-5)) * Math.cos(2 * Math.PI * u2);
+      const randStdY = Math.sqrt(-2 * Math.log(u1 || 1e-5)) * Math.sin(2 * Math.PI * u2);
+      pts.push({
+        id: pts.length,
+        x: +(center.x + randStd * 1.2).toFixed(2),
+        y: +(center.y + randStdY * 1.2).toFixed(2),
+        z: +(center.z + (Math.random() - 0.5) * 2).toFixed(2),
+        c: center.c
+      });
+    }
+  });
+  return pts;
+}
+
+function generateCircles(n = 80) {
+  const pts = [];
+  const half = Math.floor(n / 2);
+  for (let i = 0; i < half; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 2.0 + (Math.random() - 0.5) * 0.8;
+    pts.push({ id: pts.length, x: +(Math.cos(a) * r).toFixed(2), y: +(Math.sin(a) * r).toFixed(2), z: 0, c: 0 });
+  }
+  for (let i = 0; i < half; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 4.8 + (Math.random() - 0.5) * 1.2;
+    pts.push({ id: pts.length, x: +(Math.cos(a) * r).toFixed(2), y: +(Math.sin(a) * r).toFixed(2), z: 0, c: 1 });
+  }
+  return pts;
+}
+
+
+
+// Generator for "Đậu hay Rớt" (Pass / Fail) - Dự đoán kết quả thi sinh viên (Nhóm 5 SE313.R11)
+function generatePassFail() {
+  const pts = [];
+  // Lớp 0: Rớt (Fail) - Ôn tập ít & Điểm kiểm tra thấp
+  const failData = [
+    [3.0, 2.0], [4.0, 3.2], [5.0, 1.8], [5.5, 2.5], [6.0, 3.5],
+    [6.5, 4.2], [7.0, 2.8], [7.5, 4.8], [8.0, 4.0], [8.5, 3.2],
+    [9.0, 3.0], [9.5, 4.6], [10.0, 4.5], [10.5, 2.8], [11.0, 3.8],
+    [11.5, 4.9], [12.0, 4.8], [13.0, 3.2], [14.0, 4.0], [15.5, 3.5]
+  ];
+  failData.forEach(([h, g]) => {
+    pts.push({
+      id: pts.length,
+      x: h,
+      y: g,
+      z: 0,
+      c: 0,
+      tag: `SV ${h}h, ${g}đ (Rớt)`
+    });
+  });
+
+  // Lớp 1: Đậu (Pass) - Ôn tập nhiều & Điểm kiểm tra khá/giỏi
+  const passData = [
+    [12.5, 6.8], [13.5, 6.5], [14.5, 6.2], [15.0, 7.0], [16.0, 5.8],
+    [17.0, 7.5], [17.5, 8.0], [18.0, 6.5], [19.0, 8.2], [20.0, 6.0],
+    [21.0, 8.5], [22.0, 7.2], [22.5, 9.0], [24.0, 8.8], [25.0, 7.8],
+    [26.0, 9.2], [28.0, 8.0], [30.0, 9.5], [32.0, 9.0], [34.0, 9.8]
+  ];
+  passData.forEach(([h, g]) => {
+    pts.push({
+      id: pts.length,
+      x: h,
+      y: g,
+      z: 0,
+      c: 1,
+      tag: `SV ${h}h, ${g}đ (Đậu)`
+    });
+  });
+
+  return pts;
+}
+
+// Generator for "Bất động sản: Diện tích & Giá bán" - Minh họa Chuẩn hóa Min-Max
+function generateRealEstate() {
+  const pts = [];
+  // Lớp 0: Phổ thông / Tiêu chuẩn (1.5 - 4.2 tỷ VNĐ, tức 15 - 42 trăm triệu)
+  const standardData = [
+    [38, 15, '1.5'], [42, 16, '1.6'], [45, 18, '1.8'], [48, 20, '2.0'],
+    [50, 19, '1.9'], [52, 22, '2.2'], [55, 21, '2.1'], [58, 25, '2.5'],
+    [60, 24, '2.4'], [62, 26, '2.6'], [65, 28, '2.8'], [68, 27, '2.7'],
+    [70, 30, '3.0'], [72, 32, '3.2'], [75, 31, '3.1'], [78, 35, '3.5'],
+    [80, 33, '3.3'], [82, 36, '3.6'], [85, 34, '3.4'], [90, 38, '3.8'],
+    [95, 39, '3.9'], [100, 42, '4.2'], [105, 40, '4.0'], [110, 42, '4.2']
+  ];
+  standardData.forEach(([area, price100m, priceTy]) => {
+    pts.push({
+      id: pts.length,
+      x: area,
+      y: price100m,
+      z: 0,
+      c: 0,
+      tag: `${area} m², ${priceTy} tỷ`
+    });
+  });
+
+  // Lớp 1: Cao cấp / Hạng sang (5.5 - 12.0 tỷ VNĐ, tức 55 - 120 trăm triệu)
+  const luxuryData = [
+    [52, 55, '5.5'], [56, 58, '5.8'], [60, 62, '6.2'], [65, 65, '6.5'],
+    [70, 70, '7.0'], [75, 76, '7.6'], [80, 78, '7.8'], [85, 82, '8.2'],
+    [90, 85, '8.5'], [95, 90, '9.0'], [100, 88, '8.8'], [110, 95, '9.5'],
+    [120, 100, '10.0'], [130, 105, '10.5'], [140, 110, '11.0'],
+    [150, 112, '11.2'], [165, 118, '11.8'], [180, 120, '12.0']
+  ];
+  luxuryData.forEach(([area, price100m, priceTy]) => {
+    pts.push({
+      id: pts.length,
+      x: area,
+      y: price100m,
+      z: 0,
+      c: 1,
+      tag: `${area} m², ${priceTy} tỷ (Cao cấp)`
+    });
+  });
+
+  return pts;
+}
+
+// Regression Data Generators
+function generateRegHouse(n = 60) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const area = Math.round(30 + Math.random() * 90); // 30m² đến 120m² thực tế
+    const loc = +(1.0 + Math.random() * 9.0).toFixed(1);  // 1.0 đến 10.0 (vị trí / tiện ích)
+    const noise = (Math.random() - 0.5) * 0.4;
+    const price = +(0.8 + 0.045 * area + 0.35 * loc + noise).toFixed(2); // 1.5 đến 9.5 tỷ
+    pts.push({
+      id: i,
+      x: area,
+      y: loc,
+      z: 0,
+      c: 0,
+      val: price,
+      tag: `DT: ${area} m², Vị trí: ${loc}/10 → Giá: ${price} tỷ`
+    });
+  }
+  return pts;
+}
+
+function generateRegSine(n = 70) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const x = +((Math.random() - 0.5) * 8.0).toFixed(2); // -4 to 4
+    const y = +((Math.random() - 0.5) * 6.0).toFixed(2); // -3 to 3
+    const noise = (Math.random() - 0.5) * 0.3;
+    const val = +(Math.sin(x * 0.8) * Math.cos(y * 0.8) * 3.0 + noise).toFixed(2);
+    pts.push({
+      id: i,
+      x: x,
+      y: y,
+      z: 0,
+      c: 0,
+      val: val,
+      tag: `x: ${x.toFixed(2)}, y: ${y.toFixed(2)} → f(x,y): ${val.toFixed(2)}`
+    });
+  }
+  return pts;
+}
+
+function generateRegAuto(n = 60) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const hp = Math.round(60 + Math.random() * 140);     // 60 HP đến 200 HP
+    const weightTon = +(1.2 + Math.random() * 3.0).toFixed(2); // 1.2 đến 4.2 tấn
+    const noise = (Math.random() - 0.5) * 2.0;
+    const mpg = Math.max(10, +(48 - 0.12 * hp - 4.5 * weightTon + noise).toFixed(1));
+    pts.push({
+      id: i,
+      x: hp,
+      y: weightTon,
+      z: 0,
+      c: 0,
+      val: mpg,
+      tag: `Mã lực: ${hp} HP, Nặng: ${weightTon} tấn → ${mpg} MPG`
+    });
+  }
+  return pts;
+}
+
+// Legacy fallback
+function generateCustomerIncome() {
+  return generateRealEstate();
+}
+
+function loadIrisPreset() {
+  const species = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'];
+  STATE.classes = [
+    { id: 0, name: 'Iris-setosa', color: COLOR_PALETTE[0] },
+    { id: 1, name: 'Iris-versicolor', color: COLOR_PALETTE[1] },
+    { id: 2, name: 'Iris-virginica', color: COLOR_PALETTE[2] }
+  ];
+
+  STATE.columnNames = IRIS_FEATURES;
+  STATE.isMultiDim = true;
+  STATE.axes = { x: 2, y: 3, label: 4 }; // Default: Petal length (2) vs Petal width (3)
+
+  buildAxesSelectors();
+  $('card-axes').style.display = 'block';
+
+  STATE.data = IRIS_RAW.map((r, i) => {
+    return {
+      id: i,
+      x: r[STATE.axes.x],
+      y: r[STATE.axes.y],
+      z: 0,
+      c: species.indexOf(r[4]),
+      raw: r
+    };
+  });
+
+  STATE.z = { x: 5.2, y: 1.6, z: 0 };
+  showToast('Đã nạp bộ dữ liệu Iris Dataset (Fisher, 1936)');
+}
+
+function setPreset(name) {
+  STATE.preset = name;
+  STATE.isMultiDim = false;
+  $('card-axes').style.display = 'none';
+
+  const isReg = name.startsWith('reg_');
+  STATE.task = isReg ? 'regression' : 'classification';
+  const btnCls = $('task-btn-cls');
+  const btnReg = $('task-btn-reg');
+  if (btnCls) btnCls.classList.toggle('active', !isReg);
+  if (btnReg) btnReg.classList.toggle('active', isReg);
+
+  if (name === 'moons') {
+    STATE.classes = [
+      { id: 0, name: 'Class 0', color: COLOR_PALETTE[0] },
+      { id: 1, name: 'Class 1', color: COLOR_PALETTE[1] }
+    ];
+    STATE.data = generateMoons();
+    STATE.z = { x: 1.5, y: 0.8, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Two Moons (make_moons)');
+  } else if (name === 'blobs') {
+    STATE.classes = [
+      { id: 0, name: 'Cluster 0', color: COLOR_PALETTE[0] },
+      { id: 1, name: 'Cluster 1', color: COLOR_PALETTE[1] },
+      { id: 2, name: 'Cluster 2', color: COLOR_PALETTE[2] }
+    ];
+    STATE.data = generateBlobs();
+    STATE.z = { x: 0.2, y: 0.5, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Gaussian Blobs (make_blobs)');
+  } else if (name === 'circles') {
+    STATE.classes = [
+      { id: 0, name: 'Inner Circle', color: COLOR_PALETTE[0] },
+      { id: 1, name: 'Outer Circle', color: COLOR_PALETTE[1] }
+    ];
+    STATE.data = generateCircles();
+    STATE.z = { x: 3.5, y: 0.0, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Concentric Circles (make_circles)');
+  } else if (name === 'pass_fail') {
+    STATE.classes = [
+      { id: 0, name: 'Fail', color: '#ef4444' },
+      { id: 1, name: 'Pass', color: '#10b981' }
+    ];
+    STATE.data = generatePassFail();
+    STATE.z = { x: 13.5, y: 5.0, z: 0 };
+    STATE.k = 3;
+    $('k-slider').value = 3;
+    $('k-val').textContent = 'k = 3';
+    showToast('Đã nạp bộ dữ liệu Student Performance (Pass/Fail)');
+  } else if (name === 'real_estate' || name === 'customer_income') {
+    STATE.classes = [
+      { id: 0, name: 'Standard', color: '#2563eb' },
+      { id: 1, name: 'Luxury', color: '#f59e0b' }
+    ];
+    STATE.data = generateRealEstate();
+    STATE.z = { x: 85, y: 48, z: 0 };
+    STATE.k = 5;
+    $('k-slider').value = 5;
+    $('k-val').textContent = 'k = 5';
+    showToast('Đã nạp bộ dữ liệu Real Estate (Area vs Price)');
+  } else if (name === 'reg_house') {
+    STATE.classes = [
+      { id: 0, name: 'Giá nhà', color: '#2563eb' }
+    ];
+    STATE.data = generateRegHouse();
+    STATE.z = { x: 65, y: 5.5, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Hồi quy: Dự đoán Giá nhà');
+  } else if (name === 'reg_sine') {
+    STATE.classes = [
+      { id: 0, name: 'Sóng Sin', color: '#06b6d4' }
+    ];
+    STATE.data = generateRegSine();
+    STATE.z = { x: 1.2, y: 0.8, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Hồi quy: Hàm Sóng Sin phi tuyến');
+  } else if (name === 'reg_auto') {
+    STATE.classes = [
+      { id: 0, name: 'Tiêu hao MPG', color: '#f59e0b' }
+    ];
+    STATE.data = generateRegAuto();
+    STATE.z = { x: 120, y: 2.5, z: 0 };
+    showToast('Đã nạp bộ dữ liệu Hồi quy: Tiêu hao Nhiên liệu (Auto MPG)');
+  } else if (name === 'iris') {
+    loadIrisPreset();
+  } else if (name === 'empty') {
+    STATE.classes = [
+      { id: 0, name: 'Class 0', color: COLOR_PALETTE[0] },
+      { id: 1, name: 'Class 1', color: COLOR_PALETTE[1] }
+    ];
+    STATE.data = [];
+    STATE.z = { x: 0, y: 0, z: 0 };
+    showToast('Custom Dataset: Nhấp chuột lên đồ thị để thêm điểm!');
+  }
+
+  regionDirty = true;
+  updateUI();
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+}
+
+function buildAxesSelectors() {
+  const sx = $('axis-x-select');
+  const sy = $('axis-y-select');
+
+  [sx, sy].forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = '';
+    STATE.columnNames.forEach((col, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = col;
+      sel.appendChild(opt);
+    });
+  });
+
+  if (sx) sx.value = STATE.axes.x;
+  if (sy) sy.value = STATE.axes.y;
+
+  const onAxisChange = () => {
+    STATE.axes.x = +sx.value;
+    STATE.axes.y = +sy.value;
+    STATE.data.forEach(p => {
+      if (p.raw) {
+        p.x = p.raw[STATE.axes.x];
+        p.y = p.raw[STATE.axes.y];
+      }
+    });
+    regionDirty = true;
+    scheduleRegionRefresh(0);
+    requestDraw2D();
+    updateUI();
+  };
+
+  if (sx) sx.onchange = onAxisChange;
+  if (sy) sy.onchange = onAxisChange;
+}
+
+/* ==========================================================
+   MODE SWITCHING & CONTROL LISTENERS
+   ========================================================== */
+
+
+
+// Tools
+$('tool-move').onclick = () => { STATE.tool = 'move'; updateUI(); };
+$('tool-add').onclick = () => { STATE.tool = 'add'; updateUI(); };
+
+// Presets
+$('preset-select').onchange = e => setPreset(e.target.value);
+
+
+
+// k slider
+$('k-slider').oninput = e => {
+  STATE.k = parseInt(e.target.value);
+  $('k-val').textContent = `k = ${STATE.k}`;
+  if ($('pill-k-text')) $('pill-k-text').textContent = `Số láng giềng K = ${STATE.k}`;
+  if ($('popup-k-badge')) $('popup-k-badge').textContent = `k = ${STATE.k}`;
+  regionDirty = true;
+  scheduleRegionRefresh(40);
+  requestDraw2D();
+};
+$('k-dec').onclick = () => {
+  if (STATE.k > 1) {
+    STATE.k--;
+    $('k-slider').value = STATE.k;
+    $('k-val').textContent = `k = ${STATE.k}`;
+    if ($('pill-k-text')) $('pill-k-text').textContent = `Số láng giềng K = ${STATE.k}`;
+    if ($('popup-k-badge')) $('popup-k-badge').textContent = `k = ${STATE.k}`;
+    regionDirty = true;
+    scheduleRegionRefresh(0);
+    requestDraw2D();
+  }
+};
+$('k-inc').onclick = () => {
+  if (STATE.k < 50) {
+    STATE.k++;
+    $('k-slider').value = STATE.k;
+    $('k-val').textContent = `k = ${STATE.k}`;
+    if ($('pill-k-text')) $('pill-k-text').textContent = `Số láng giềng K = ${STATE.k}`;
+    if ($('popup-k-badge')) $('popup-k-badge').textContent = `k = ${STATE.k}`;
+    regionDirty = true;
+    scheduleRegionRefresh(0);
+    requestDraw2D();
+  }
+};
+
+// Metric buttons
+document.querySelectorAll('#metric-grid .metric-btn').forEach(btn => {
+  btn.onclick = () => {
+    STATE.metric = btn.dataset.metric;
+    if (STATE.metric === 'cosine') {
+      const norm = Math.hypot(STATE.z.x, STATE.z.y);
+      if (norm < 1e-4) {
+        STATE.z.x = 2;
+        STATE.z.y = 2;
+        syncZInputs();
+      }
+    }
+    regionDirty = true;
+    updateUI();
+    scheduleRegionRefresh(0);
+    requestDraw2D();
+  };
+});
+
+// Switches
+$('toggle-weights').onchange = e => {
+  STATE.weighting = e.target.checked;
+  regionDirty = true;
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+};
+$('toggle-norm').onchange = e => {
+  STATE.norm = e.target.checked;
+  regionDirty = true;
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+};
+$('toggle-regions').onchange = e => {
+  STATE.showRegions = e.target.checked;
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+};
+
+// Z coordinate number inputs
+if ($('zx-input')) {
+  $('zx-input').onchange = e => {
+    STATE.z.x = parseFloat(e.target.value) || 0;
+    requestDraw2D();
+  };
+}
+if ($('zy-input')) {
+  $('zy-input').onchange = e => {
+    STATE.z.y = parseFloat(e.target.value) || 0;
+    requestDraw2D();
+  };
+}
+
+// Desmos Navigation Buttons
+$('btn-zoom-in').onclick = () => {
+  STATE.scale2D = Math.min(1e8, STATE.scale2D * 1.25);
+  requestDraw2D();
+  scheduleRegionRefresh(80);
+};
+$('btn-zoom-out').onclick = () => {
+  STATE.scale2D = Math.max(1e-7, STATE.scale2D / 1.25);
+  requestDraw2D();
+  scheduleRegionRefresh(80);
+};
+$('btn-home').onclick = () => {
+  STATE.scale2D = 60;
+  STATE.origin2D = { x: cv2d.width / 2 / (window.devicePixelRatio || 1), y: cv2d.height / 2 / (window.devicePixelRatio || 1) };
+  regionDirty = true;
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+};
+
+
+
+// Unified Keyboard Engine for Point Z (WASD, Arrows, Space, Shift)
+const activeKeys = new Set();
+
+function isTypingInInput() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName ? el.tagName.toLowerCase() : '';
+  return tag === 'input' || tag === 'textarea' || tag === 'select';
+}
+
+function updateCoordBadge(x, y) {
+  const badge = $('coord-badge');
+  if (!badge) return;
+  badge.textContent = `X: ${x.toFixed(2)}, Y: ${y.toFixed(2)}`;
+}
+
+window.addEventListener('keydown', e => {
+  if (isTypingInInput()) return;
+
+  // Delete / Backspace: delete selected point
+  if ((e.code === 'Delete' || e.code === 'Backspace')) {
+    if (selectedPoint) {
+      e.preventDefault();
+      const ptToDelete = selectedPoint;
+      selectedPoint = null;
+      deletePoint(ptToDelete);
+      showToast(`Đã xóa điểm #${ptToDelete.id + 1} (Phím Delete)`);
+      return;
+    }
+  }
+  if (e.code === 'Escape') {
+    if (selectedPoint) {
+      selectedPoint = null;
+      syncSelectedPointUI();
+      requestDraw2D();
+    }
+  }
+
+
+
+  // Number keys 1-8 for class selection
+  if ('12345678'.includes(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    const num = parseInt(e.key) - 1;
+    if (num < STATE.classes.length) {
+      STATE.activeClass = num;
+      STATE.tool = 'add';
+      updateUI();
+      return;
+    }
+  }
+
+  // Tool shortcuts: M (move), P (place)
+  if (e.key === 'm' || e.key === 'M') {
+    STATE.tool = 'move';
+    updateUI();
+    return;
+  }
+  if (e.key === 'p' || e.key === 'P') {
+    STATE.tool = 'add';
+    updateUI();
+    return;
+  }
+
+  // Movement keys: W, A, S, D, Arrows, Space, Shift
+  const code = e.code;
+  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'].includes(code)) {
+    e.preventDefault();
+    activeKeys.add(code);
+  }
+});
+
+window.addEventListener('keyup', e => {
+  activeKeys.delete(e.code);
+});
+
+window.addEventListener('blur', () => {
+  activeKeys.clear();
+});
+
+// Smooth Continuous Movement Processor for Point Z
+function handleKeyMovement(dt) {
+  let dx = 0, dy = 0;
+  if (activeKeys.has('KeyW') || activeKeys.has('ArrowUp')) dy += 1;
+  if (activeKeys.has('KeyS') || activeKeys.has('ArrowDown')) dy -= 1;
+  if (activeKeys.has('KeyA') || activeKeys.has('ArrowLeft')) dx -= 1;
+  if (activeKeys.has('KeyD') || activeKeys.has('ArrowRight')) dx += 1;
+
+  if (dx === 0 && dy === 0) return;
+  const isFast = activeKeys.has('ShiftLeft') || activeKeys.has('ShiftRight');
+  const speedPx = isFast ? 500 : 200; // screen pixels per sec
+  const mathSpeed = speedPx / STATE.scale2D;
+  STATE.z.x += dx * mathSpeed * dt;
+  STATE.z.y += dy * mathSpeed * dt;
+
+  requestDraw2D();
+  updateCoordBadge(STATE.z.x, STATE.z.y);
+  const pred = predictKNN([STATE.z.x, STATE.z.y]);
+  updatePredictionUI(pred);
+  if (PSEUDO_STATE.currentStep === 4) {
+    PSEUDO_STATE.winnerAnnounced = true;
+    showStaticVoteTally(pred);
+  }
+}
+
+// Global Animation Loop (Unified 120 FPS Keyboard & Dynamic Plane)
+let lastAnimTime = performance.now();
+function appAnimationLoop(now) {
+  requestAnimationFrame(appAnimationLoop);
+  const dt = Math.min(0.08, (now - lastAnimTime) / 1000);
+  lastAnimTime = now;
+
+  if (activeKeys.size > 0 && !isTypingInInput()) {
+    handleKeyMovement(dt);
+  }
+
+  // Only request continuous redraw when step 1 halo pulse is playing
+  if (PSEUDO_STATE.currentStep === 1) {
+    requestDraw2D();
+  }
+}
+requestAnimationFrame(appAnimationLoop);
+
+// Initial boot
+
+// ==========================================================
+// PSEUDOCODE SIDEBAR CARD EVENT LISTENERS
+// ==========================================================
+
+const btnPseudoPlay = document.getElementById('btn-pseudo-play');
+if (btnPseudoPlay) btnPseudoPlay.addEventListener('click', togglePlayPausePseudocode);
+
+const btnPseudoPrev = document.getElementById('btn-pseudo-prev');
+if (btnPseudoPrev) btnPseudoPrev.addEventListener('click', () => stepPseudocode(-1));
+
+const btnPseudoNext = document.getElementById('btn-pseudo-next');
+if (btnPseudoNext) btnPseudoNext.addEventListener('click', () => stepPseudocode(1));
+
+const btnPseudoReset = document.getElementById('btn-pseudo-reset');
+if (btnPseudoReset) btnPseudoReset.addEventListener('click', resetPseudocode);
+
+const btnPseudoSpeed = document.getElementById('btn-pseudo-speed');
+if (btnPseudoSpeed) {
+  btnPseudoSpeed.addEventListener('click', () => {
+    if (PSEUDO_STATE.speed === 1.0) {
+      PSEUDO_STATE.speed = 2.0;
+      btnPseudoSpeed.textContent = '2x';
+    } else if (PSEUDO_STATE.speed === 2.0) {
+      PSEUDO_STATE.speed = 0.5;
+      btnPseudoSpeed.textContent = '0.5x';
+    } else {
+      PSEUDO_STATE.speed = 1.0;
+      btnPseudoSpeed.textContent = '1x';
+    }
+  });
+}
+
+// Spacebar shortcut to play/pause pseudocode runner
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !isTypingInInput()) {
+    e.preventDefault();
+    togglePlayPausePseudocode();
+  }
+});
+
+// Initial boot for Pseudocode Card
+updatePseudocodeUI();
+
+initElementsTableUI();
+resizeCanvas();
+setPreset('moons');
+</script>
+</body>
+</html>
