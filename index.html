@@ -2537,25 +2537,13 @@
       PSEUDO_STATE.impactRipples = [];
       PSEUDO_STATE.winnerAnnounced = false;
 
-      showStaticVoteTally(pred);
+      // Initialize tally UI cleanly from 0 (or 0.00) without showing the final result first
+      showStaticVoteTally(pred, true);
 
       const tally = $('canvas-vote-tally');
       if (tally) {
         tally.style.display = 'flex';
         if (typeof bringPopupToFront === 'function') bringPopupToFront(tally);
-      }
-
-      // Hide conclusion banner initially until all orbs finish landing
-      const winnerBanner = document.getElementById('tally-winner-banner');
-      if (winnerBanner) winnerBanner.style.display = 'none';
-
-      if (STATE.task === 'classification') {
-        STATE.classes.forEach(c => {
-          const cntEl = document.getElementById(`tally-count-${c.id}`);
-          if (cntEl) cntEl.textContent = STATE.weighting ? '0.00' : '0';
-          const pctEl = document.getElementById(`tally-pct-${c.id}`);
-          if (pctEl) pctEl.textContent = '(0%)';
-        });
       }
 
       // Spawn vote orbs: from each neighbor point straight to Z!
@@ -2752,7 +2740,7 @@
     }
 
     // Step 4 Vote Tally HUD Display (Static & Live on Z Drag)
-    function showStaticVoteTally(pred) {
+    function showStaticVoteTally(pred, isInitial = false) {
       if (!pred) pred = predictKNN([STATE.z.x, STATE.z.y]);
       const tally = $('canvas-vote-tally');
       if (!tally) return;
@@ -2805,7 +2793,7 @@
         }
 
         if (winnerBanner) {
-          winnerBanner.style.display = 'flex';
+          winnerBanner.style.display = isInitial ? 'none' : 'flex';
           const zCol = getColorForValue(pred.yHat);
           winnerBanner.innerHTML = `
           <div class="pseudo-winner-card" style="display:flex; align-items:center; justify-content:center; padding:8px 12px; background:${zCol}15; border:1px solid ${zCol}60; border-radius:8px; width:100%; text-align:center;">
@@ -2823,11 +2811,14 @@
           rowsContainer.innerHTML = STATE.classes.map(c => {
             const votes = (pred.votes && pred.votes[c.id]) || (pred.counts && pred.counts[c.id]) || 0;
             const wScore = (pred.weights && pred.weights[c.id]) || 0;
-            const displayScore = STATE.weighting ? wScore.toFixed(2) : votes;
-            const pct = STATE.weighting
+            const finalScore = STATE.weighting ? wScore.toFixed(2) : votes;
+            const finalPct = STATE.weighting
               ? (totalWeight > 0 ? Math.round((wScore / totalWeight) * 100) : 0)
               : (totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0);
-            const isWinner = (c.id === pred.label);
+
+            const displayScore = isInitial ? (STATE.weighting ? '0.00' : '0') : finalScore;
+            const pct = isInitial ? 0 : finalPct;
+
             return `
             <div class="tally-row" id="tally-row-${c.id}" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.84rem;">
               <div style="display:flex; align-items:center; gap:8px;">
@@ -2844,6 +2835,7 @@
         }
 
         if (winnerBanner) {
+          winnerBanner.style.display = isInitial ? 'none' : 'flex';
           const winnerCls = STATE.classes.find(c => c.id === pred.label) || { name: 'Đỏ', color: '#ef4444' };
           const winnerVotes = (pred.votes && pred.votes[winnerCls.id]) || 0;
           const winnerWeight = (pred.weights && pred.weights[winnerCls.id]) || 0;
@@ -4630,7 +4622,7 @@
         pred = predictKNN([STATE.z.x, STATE.z.y, STATE.z.z || 0]);
       }
       lastKNNPred = pred;
-      if (PSEUDO_STATE.currentStep === 4) {
+      if (PSEUDO_STATE.currentStep === 4 && PSEUDO_STATE.winnerAnnounced) {
         showStaticVoteTally(pred);
       }
 
