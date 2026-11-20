@@ -116,8 +116,14 @@ function predictKNN(pointCoords, customK, opts = {}) {
     };
   });
 
-  // 2. Stable sort by distance
-  distances.sort((a, b) => a.dist - b.dist || a.index - b.index);
+  // 2. Stable sort by distance with epsilon tie-break (eliminates IEEE-754 precision noise)
+  distances.sort((a, b) => {
+    const diff = a.dist - b.dist;
+    if (Math.abs(diff) < 1e-6) {
+      return a.index - b.index;
+    }
+    return diff;
+  });
 
   // 3. Extract k nearest neighbors
   const kActual = Math.min(kVal, distances.length);

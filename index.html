@@ -659,9 +659,26 @@
     }
     .popup-body {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      overflow-x: auto;
+      overflow-x: hidden;
       background: #ffffff;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    .popup-body::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .popup-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .popup-body::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .popup-body::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
     .popup-resize-corner {
       position: absolute;
@@ -679,25 +696,25 @@
     /* Unified Modern Table Design (Nearest Neighbors & Elements Table) */
     .knn-modern-table {
       width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 0.78rem;
+      table-layout: auto;
+      border-collapse: collapse;
+      font-size: 0.74rem;
       text-align: left;
     }
     .knn-modern-table th {
       position: sticky;
       top: 0;
       background: #f8fafc;
-      padding: 8px 10px;
+      padding: 5px 6px;
       font-weight: 600;
-      font-size: 0.73rem;
+      font-size: 0.71rem;
       color: #475569;
       border-bottom: 1px solid #e2e8f0;
       white-space: nowrap;
       z-index: 5;
     }
     .knn-modern-table td {
-      padding: 7px 10px;
+      padding: 5px 6px;
       border-bottom: 1px solid #f1f5f9;
       color: #334155;
       white-space: nowrap;
@@ -1559,15 +1576,16 @@
       <div class="preset-select-wrapper">
         <select class="preset-select" id="preset-select" title="Chọn bộ dữ liệu mẫu">
           <optgroup label="Phân lớp (Classification)">
+            <option value="pass_fail" selected>Đậu hay Rớt? (Ví dụ nhóm 5)</option>
             <option value="moons">Two Moons</option>
             <option value="blobs">Gaussian Blobs</option>
             <option value="circles">Concentric Circles</option>
-            <option value="pass_fail">Student Performance (Pass/Fail)</option>
             <option value="real_estate">Real Estate (Area vs Price)</option>
             <option value="iris">Iris Dataset (Fisher, 1936)</option>
             <option value="empty">Custom Dataset (Blank Canvas)</option>
           </optgroup>
           <optgroup label="Hồi quy (Regression)">
+            <option value="reg_exam">Đoán điểm cuối kỳ (Ví dụ nhóm 5)</option>
             <option value="reg_house">Dự đoán Giá nhà (Area & Dist → Price)</option>
             <option value="reg_sine">Hàm phi tuyến Sóng Sin (Nonlinear Curve)</option>
             <option value="reg_auto">Tiêu hao Nhiên liệu xe (HP & Weight → MPG)</option>
@@ -1600,7 +1618,7 @@
         </div>
         <div class="popup-body" id="popup-prediction-body" style="padding: 12px 14px; overflow: visible;">
           <!-- Coordinates readout/inputs -->
-          <div class="coords-grid" id="z-coords-container" style="margin-bottom: 10px;">
+          <div class="coords-grid" id="z-coords-container" style="margin-bottom: 6px;">
             <div class="coord-item">
               <span class="coord-label">X:</span>
               <input type="number" step="0.1" class="coord-input" id="zx-input" value="0.0">
@@ -1609,6 +1627,13 @@
               <span class="coord-label">Y:</span>
               <input type="number" step="0.1" class="coord-input" id="zy-input" value="0.0">
             </div>
+          </div>
+
+          <!-- Quick query presets for student dataset -->
+          <div id="quick-query-row" style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button class="pill-btn" onclick="setQueryZ(5, 3)" style="flex:1; font-size:0.68rem; padding:3px 2px; text-align:center;" title="Điểm Z = (5, 3) nằm giữa hai nhóm (Bài giảng)">Z (5, 3)</button>
+            <button class="pill-btn" onclick="setQueryZ(3, 4)" style="flex:1; font-size:0.68rem; padding:3px 2px; text-align:center;" title="Điểm Y = (3, 4) nằm sâu trong nhóm Rớt (Bài giảng)">Y (3, 4)</button>
+            <button class="pill-btn" onclick="addStudentI()" style="flex:1.2; font-size:0.68rem; padding:3px 2px; text-align:center;" title="Thêm mẫu I = (4, 3, Rớt) - Minh họa không cần huấn luyện lại">+ Mẫu I (4, 3)</button>
           </div>
 
           <!-- Prediction Banner -->
@@ -1800,7 +1825,7 @@
       </div>
 
       <!-- Floating Box 1: k Nearest Neighbors -->
-      <div class="floating-popup" id="popup-nearest" style="top: 12px; right: 345px; width: 350px; height: 230px; display: none;">
+      <div class="floating-popup" id="popup-nearest" style="top: 12px; right: 345px; width: 395px; height: 225px; display: none;">
         <div class="popup-header" id="popup-nearest-header">
           <div class="popup-title">
             <span>Các láng giềng gần nhất</span>
@@ -1816,11 +1841,12 @@
           <table class="knn-modern-table" id="nb-table">
             <thead>
               <tr id="nb-thead-tr">
-                <th style="width:40px;">#</th>
-                <th>Lớp</th>
+                <th style="width:28px; text-align:center;">#</th>
+                <th style="width:36px;">Mẫu</th>
+                <th id="nb-th-target" style="width:50px;">Lớp</th>
                 <th id="nb-th-col1">Trường 1</th>
                 <th id="nb-th-col2">Trường 2</th>
-                <th style="width:85px;">d(Z)</th>
+                <th id="nb-th-dist" style="width:75px; text-align:right;">Khoảng cách</th>
               </tr>
             </thead>
             <tbody id="nb-tbody">
@@ -1832,7 +1858,7 @@
       </div>
 
       <!-- Floating Box 2: Elements Data -->
-      <div class="floating-popup" id="popup-elements" style="top: 255px; right: 345px; width: 390px; height: 260px; display: none;">
+      <div class="floating-popup" id="popup-elements" style="top: 250px; right: 345px; width: 395px; height: 260px; display: none;">
         <div class="popup-header" id="popup-elements-header">
           <div class="popup-title">
             <span>Phần tử trong các lớp</span>
@@ -1850,7 +1876,7 @@
           <input type="text" id="elem-search-input" class="elem-search" placeholder="Lọc theo giá trị, nhãn..." style="flex:1;">
           <select id="elem-sort-select" class="elem-sort">
             <option value="id"># Thứ tự</option>
-            <option value="dist">d(Z) Gần → Xa</option>
+            <option value="dist">Gần → Xa</option>
             <option value="class">Theo lớp</option>
           </select>
         </div>
@@ -1858,11 +1884,12 @@
           <table class="knn-modern-table" id="elem-table">
             <thead>
               <tr id="elem-thead-tr">
-                <th style="width:40px;">#</th>
-                <th>Lớp</th>
+                <th style="width:28px; text-align:center;">#</th>
+                <th style="width:36px;">Mẫu</th>
+                <th id="elem-th-target" style="width:50px;">Lớp</th>
                 <th id="elem-th-col1">Trường 1</th>
                 <th id="elem-th-col2">Trường 2</th>
-                <th style="width:85px;">d(Z)</th>
+                <th id="elem-th-dist" style="width:75px; text-align:right;">Khoảng cách</th>
               </tr>
             </thead>
             <tbody id="elem-tbody">
@@ -2517,7 +2544,9 @@ const STATE = {
       if (STATE.task === 'regression') {
         subHeader.innerHTML = `<span>k Láng giềng gần nhất</span><span>Giá trị y (Khoảng cách d)</span>`;
       } else {
-        subHeader.innerHTML = `<span>Lớp dữ liệu</span><span>Số phiếu (Tỷ lệ %)</span>`;
+        subHeader.innerHTML = STATE.weighting
+          ? `<span>Lớp dữ liệu</span><span>Trọng số 1/d (Tỷ lệ %)</span>`
+          : `<span>Lớp dữ liệu</span><span>Số phiếu (Tỷ lệ %)</span>`;
       }
     }
 
@@ -2561,10 +2590,15 @@ const STATE = {
       }
     } else {
       // Classification
+      const totalWeight = STATE.classes.reduce((sum, c) => sum + (pred.weights[c.id] || 0), 0);
       if (rowsContainer) {
         rowsContainer.innerHTML = STATE.classes.map(c => {
           const votes = (pred.votes && pred.votes[c.id]) || (pred.counts && pred.counts[c.id]) || 0;
-          const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+          const wScore = (pred.weights && pred.weights[c.id]) || 0;
+          const displayScore = STATE.weighting ? wScore.toFixed(2) : votes;
+          const pct = STATE.weighting
+            ? (totalWeight > 0 ? Math.round((wScore / totalWeight) * 100) : 0)
+            : (totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0);
           const isWinner = (c.id === pred.label);
           return `
             <div class="tally-row" id="tally-row-${c.id}" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.84rem;">
@@ -2574,7 +2608,7 @@ const STATE = {
                 <span class="status-badge ${isWinner ? 'winner' : 'loser'}" id="tally-status-${c.id}">${isWinner ? '👑 Dự đoán' : 'Thua'}</span>
               </div>
               <div style="display:flex; align-items:baseline; gap:5px; font-weight:700;">
-                <span class="pseudo-vote-count" id="tally-count-${c.id}" style="color:${c.color}; font-size:1.02rem;">${votes}</span>
+                <span class="pseudo-vote-count" id="tally-count-${c.id}" style="color:${c.color}; font-size:1.02rem;">${displayScore}</span>
                 <span id="tally-pct-${c.id}" style="color:#64748b; font-size:0.75rem; font-weight:500;">(${pct}%)</span>
               </div>
             </div>
@@ -2585,13 +2619,20 @@ const STATE = {
       if (winnerBanner) {
         const winnerCls = STATE.classes.find(c => c.id === pred.label) || { name: 'Đỏ', color: '#ef4444' };
         const winnerVotes = (pred.votes && pred.votes[winnerCls.id]) || 0;
-        const pct = totalVotes > 0 ? Math.round((winnerVotes / totalVotes) * 100) : 100;
+        const winnerWeight = (pred.weights && pred.weights[winnerCls.id]) || 0;
+        const pct = STATE.weighting
+          ? (totalWeight > 0 ? Math.round((winnerWeight / totalWeight) * 100) : 100)
+          : (totalVotes > 0 ? Math.round((winnerVotes / totalVotes) * 100) : 100);
+        const detailStr = STATE.weighting
+          ? `(Tổng trọng số 1/d: ${winnerWeight.toFixed(2)} - ${pct}%)`
+          : `(${winnerVotes}/${totalVotes} phiếu - ${pct}%)`;
+
         winnerBanner.style.display = 'flex';
         winnerBanner.innerHTML = `
           <div class="pseudo-winner-card" style="display:flex; align-items:center; justify-content:center; padding:8px 12px; background:${winnerCls.color}15; border:1px solid ${winnerCls.color}60; border-radius:8px; width:100%; text-align:center;">
             <div style="font-size:0.82rem; color:#1e293b; line-height:1.4;">
               <div>Điểm cần đoán thuộc <b style="color:${winnerCls.color}; font-size:0.9rem;">${winnerCls.name}!</b></div>
-              <div style="color:#64748b; font-size:0.75rem; font-weight:500; margin-top:2px;">(${winnerVotes}/${totalVotes} phiếu - ${pct}%)</div>
+              <div style="color:#64748b; font-size:0.75rem; font-weight:500; margin-top:2px;">${detailStr}</div>
             </div>
           </div>
         `;
@@ -2632,25 +2673,25 @@ function showToast(msg) {
 
 // (Distance metrics DIST & normalization getBounds are loaded from knn.js)
 
-// Pre-allocated typed arrays for ultra-fast KNN computation
-let arrX = new Float32Array(0);
-let arrY = new Float32Array(0);
+// Pre-allocated typed arrays for ultra-fast KNN computation (Float64 for bit-exact parity)
+let arrX = new Float64Array(0);
+let arrY = new Float64Array(0);
 let arrC = new Uint8Array(0);
-let arrNormX = new Float32Array(0);
-let arrNormY = new Float32Array(0);
-let arrVal = new Float32Array(0);
-let arrNorm = new Float32Array(0);
+let arrNormX = new Float64Array(0);
+let arrNormY = new Float64Array(0);
+let arrVal = new Float64Array(0);
+let arrNorm = new Float64Array(0);
 
 function syncDataArrays() {
   const n = STATE.data.length;
   if (arrX.length !== n) {
-    arrX = new Float32Array(n);
-    arrY = new Float32Array(n);
+    arrX = new Float64Array(n);
+    arrY = new Float64Array(n);
     arrC = new Uint8Array(n);
-    arrNormX = new Float32Array(n);
-    arrNormY = new Float32Array(n);
-    arrVal = new Float32Array(n);
-    arrNorm = new Float32Array(n);
+    arrNormX = new Float64Array(n);
+    arrNormY = new Float64Array(n);
+    arrVal = new Float64Array(n);
+    arrNorm = new Float64Array(n);
   }
   const { min, max } = getBounds();
   const spanX = (max[0] - min[0]) || 1;
@@ -2725,17 +2766,25 @@ function setTaskMode(task) {
   if (btnReg) btnReg.classList.toggle('active', task === 'regression');
 
   if (task === 'regression') {
-    if (!STATE.preset || !STATE.preset.startsWith('reg_')) {
+    if (STATE.preset === 'pass_fail' || STATE.preset === 'reg_exam') {
+      STATE.preset = 'reg_exam';
+      const sel = $('preset-select');
+      if (sel) sel.value = 'reg_exam';
+    } else if (!STATE.preset || !STATE.preset.startsWith('reg_')) {
       const sel = $('preset-select');
       if (sel) sel.value = 'reg_house';
       setPreset('reg_house');
       return;
     }
   } else {
-    if (STATE.preset && STATE.preset.startsWith('reg_')) {
+    if (STATE.preset === 'reg_exam' || STATE.preset === 'pass_fail') {
+      STATE.preset = 'pass_fail';
       const sel = $('preset-select');
-      if (sel) sel.value = 'moons';
-      setPreset('moons');
+      if (sel) sel.value = 'pass_fail';
+    } else if (STATE.preset && STATE.preset.startsWith('reg_')) {
+      const sel = $('preset-select');
+      if (sel) sel.value = 'pass_fail';
+      setPreset('pass_fail');
       return;
     }
   }
@@ -2897,10 +2946,11 @@ function rebuildDecisionRegions() {
   const spanX = (max[0] - min[0]) || 1;
   const spanY = (max[1] - min[1]) || 1;
 
-  const topD = new Float32Array(k);
+  const topD = new Float64Array(k);
+  const topI = new Uint16Array(k);
   const topC = new Uint8Array(k);
-  const topV = new Float32Array(k);
-  const votes = new Float32Array(numClasses);
+  const topV = new Float64Array(k);
+  const votes = new Float64Array(numClasses);
   const isRegression = (STATE.task === 'regression');
   const valBounds = isRegression ? getDatasetValueBounds() : null;
 
@@ -2925,11 +2975,12 @@ function rebuildDecisionRegions() {
       // Reset top K
       for (let j = 0; j < k; j++) {
         topD[j] = Infinity;
+        topI[j] = 65535;
         topC[j] = 255;
         topV[j] = 0;
       }
 
-      // Fast typed-array KNN search with insertion sort (zero object allocation)
+      // Fast typed-array KNN search with insertion sort and epsilon tie-breaking
       for (let i = 0; i < n; i++) {
         let d;
         if (isEuclid) {
@@ -2946,15 +2997,23 @@ function rebuildDecisionRegions() {
           d = (denom > 1e-9) ? 1 - dot / denom : 1;
         }
 
-        if (d < topD[k - 1]) {
+        const diffLast = d - topD[k - 1];
+        const isCloserLast = (Math.abs(diffLast) < 1e-6) ? (i < topI[k - 1]) : (diffLast < 0);
+
+        if (isCloserLast) {
           let pos = k - 1;
-          while (pos > 0 && d < topD[pos - 1]) {
+          while (pos > 0) {
+            const diffPrev = d - topD[pos - 1];
+            const isCloserPrev = (Math.abs(diffPrev) < 1e-6) ? (i < topI[pos - 1]) : (diffPrev < 0);
+            if (!isCloserPrev) break;
             topD[pos] = topD[pos - 1];
+            topI[pos] = topI[pos - 1];
             topC[pos] = topC[pos - 1];
             topV[pos] = topV[pos - 1];
             pos--;
           }
           topD[pos] = d;
+          topI[pos] = i;
           topC[pos] = pc[i];
           topV[pos] = arrVal[i];
         }
@@ -3422,7 +3481,11 @@ function draw2D() {
     pred.nearest.forEach(n => {
       const sp = toScreen2D(n.point.x, n.point.y);
       ctx2d.beginPath();
-      ctx2d.moveTo(sz.x, sz.y);
+      if (STATE.metric === 'cosine') {
+        ctx2d.moveTo(originScreen.x, originScreen.y);
+      } else {
+        ctx2d.moveTo(sz.x, sz.y);
+      }
       ctx2d.lineTo(sp.x, sp.y);
       ctx2d.stroke();
     });
@@ -3437,30 +3500,35 @@ function draw2D() {
       pred.distances.slice(STATE.k).forEach(item => {
         const sp = toScreen2D(item.point.x, item.point.y);
         ctx2d.beginPath();
-        ctx2d.moveTo(sz.x, sz.y);
+        if (STATE.metric === 'cosine') {
+          ctx2d.moveTo(originScreen.x, originScreen.y);
+        } else {
+          ctx2d.moveTo(sz.x, sz.y);
+        }
         ctx2d.lineTo(sp.x, sp.y);
         ctx2d.stroke();
       });
       ctx2d.restore();
     }
+  }
 
-    // Cosine reference ray (extends through Z across the viewing area)
-    if (STATE.metric === 'cosine') {
-      const oScreen = originScreen;
-      const zVecX = STATE.z.x - originMath[0];
-      const zVecY = STATE.z.y - originMath[1];
-      const theta = (Math.hypot(zVecX, zVecY) > 1e-5) ? Math.atan2(zVecY, zVecX) : 0;
-      const dpr = window.devicePixelRatio || 1;
-      const rayLen = Math.max(Math.hypot(cv2d.width / dpr, cv2d.height / dpr) * 1.5, Math.hypot(sz.x - oScreen.x, sz.y - oScreen.y) * 1.5);
-      ctx2d.save();
-      ctx2d.strokeStyle = '#f59e0b';
-      ctx2d.lineWidth = 2.0;
-      ctx2d.beginPath();
-      ctx2d.moveTo(oScreen.x, oScreen.y);
-      ctx2d.lineTo(oScreen.x + rayLen * Math.cos(-theta), oScreen.y + rayLen * Math.sin(-theta));
-      ctx2d.stroke();
-      ctx2d.restore();
-    }
+  // Cosine reference ray (vector OZ from origin through Z)
+  if (STATE.metric === 'cosine') {
+    const originMath = STATE.norm ? (getBounds().min) : [0, 0];
+    const oScreen = toScreen2D(originMath[0], originMath[1]);
+    const zVecX = STATE.z.x - originMath[0];
+    const zVecY = STATE.z.y - originMath[1];
+    const theta = (Math.hypot(zVecX, zVecY) > 1e-5) ? Math.atan2(zVecY, zVecX) : 0;
+    const dpr = window.devicePixelRatio || 1;
+    const rayLen = Math.max(Math.hypot(cv2d.width / dpr, cv2d.height / dpr) * 1.5, Math.hypot(sz.x - oScreen.x, sz.y - oScreen.y) * 1.5);
+    ctx2d.save();
+    ctx2d.strokeStyle = '#f59e0b';
+    ctx2d.lineWidth = 2.0;
+    ctx2d.beginPath();
+    ctx2d.moveTo(oScreen.x, oScreen.y);
+    ctx2d.lineTo(oScreen.x + rayLen * Math.cos(-theta), oScreen.y + rayLen * Math.sin(-theta));
+    ctx2d.stroke();
+    ctx2d.restore();
   }
 
   // 4. Data Points (Exterior points fade out & disappear in Step 3+)
@@ -3489,6 +3557,15 @@ function draw2D() {
     ctx2d.lineWidth = 1.2;
     ctx2d.strokeStyle = '#ffffff';
     ctx2d.stroke();
+
+    // Student letter label (A, B, C...)
+    if (p.label) {
+      ctx2d.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx2d.fillStyle = '#1e293b';
+      ctx2d.textAlign = 'left';
+      ctx2d.textBaseline = 'middle';
+      ctx2d.fillText(p.label, sp.x + ptRadius + 4, sp.y - 1);
+    }
 
     // Hover highlight
     if (hoveredPoint === p) {
@@ -3539,7 +3616,8 @@ function draw2D() {
       ctx2d.fillStyle = '#d97706';
       ctx2d.textAlign = 'center';
       ctx2d.textBaseline = 'bottom';
-      ctx2d.fillText(`#${idx + 1}`, sp.x, sp.y - ptRadius - 4);
+      const rankTag = n.point.label ? `#${idx + 1} (${n.point.label})` : `#${idx + 1}`;
+      ctx2d.fillText(rankTag, sp.x, sp.y - ptRadius - 4);
     });
     ctx2d.restore();
   }
@@ -3648,6 +3726,13 @@ function draw2D() {
   ctx2d.lineWidth = 1.3;
   ctx2d.strokeStyle = isUnclassified ? '#475569' : '#000000';
   ctx2d.stroke();
+
+  // Label Z
+  ctx2d.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx2d.fillStyle = '#0f172a';
+  ctx2d.textAlign = 'left';
+  ctx2d.textBaseline = 'middle';
+  ctx2d.fillText(`Z (${formatCoord(STATE.z.x)}, ${formatCoord(STATE.z.y)})`, sz.x + 13, sz.y);
   ctx2d.restore();
 
   // Update Prediction UI
@@ -3986,12 +4071,12 @@ function getDatasetFieldInfo() {
       format2: p => `${(p.y / 10).toFixed(1)} tỷ`
     };
   }
-  if (STATE.preset === 'student' || (STATE.data[0]?.tag && STATE.data[0].tag.includes('SV'))) {
+  if (STATE.preset === 'pass_fail' || STATE.preset === 'reg_exam' || STATE.preset === 'student' || (STATE.data[0]?.tag && (STATE.data[0].tag.includes('SV') || STATE.data[0].tag.includes('học')))) {
     return {
-      name1: 'Giờ học',
-      name2: 'Điểm thi',
-      format1: p => `${p.x.toFixed(1)}h`,
-      format2: p => `${p.y.toFixed(1)}đ`
+      name1: 'Giờ học (x₁)',
+      name2: 'Buổi vắng (x₂)',
+      format1: p => `${p.x}h`,
+      format2: p => `${p.y} buổi`
     };
   }
   if (STATE.isMultiDim) {
@@ -4432,37 +4517,48 @@ function updateElementsTable(pred) {
   const elemThCol2 = $('elem-th-col2');
   if (elemThCol1) elemThCol1.textContent = info.name1;
   if (elemThCol2) elemThCol2.textContent = info.name2;
+  const elemThTarget = $('elem-th-target');
+  if (elemThTarget) elemThTarget.textContent = (STATE.task === 'regression') ? 'Điểm thi' : 'Lớp';
+  const elemThDist = $('elem-th-dist');
+  if (elemThDist) elemThDist.textContent = STATE.weighting ? 'Trọng số (1/d)' : 'Khoảng cách';
 
   const tbody = $('elem-tbody');
   if (tbody) {
     tbody.innerHTML = '';
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:16px;">Không có phần tử phù hợp</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">Không có phần tử phù hợp</td></tr>`;
     } else {
       list.forEach(p => {
         const cls = STATE.classes.find(c => c.id === p.c) || { name: '?', color: '#64748b' };
         const dInfo = distMap.get(p.id) || { dist: 0, rank: 999, isNearest: false };
         const val1 = info.format1(p);
         const val2 = info.format2(p);
+        const chipColor = (STATE.task === 'regression' && p.val !== undefined) ? getColorForValue(p.val) : cls.color;
+        const chipText = (STATE.task === 'regression' && p.val !== undefined) ? p.val.toFixed(1) : cls.name;
+
+        // Clean sample name: remove "SV " prefix, or fallback to point id+1
+        const rawName = p.label || p.name || '';
+        const sampleName = rawName.replace(/^SV\s*/i, '');
+        const displaySample = sampleName ? sampleName : (p.id + 1);
+
+        // Distance or Weight value (synchronized with 1/d)
+        const weightVal = 1 / (dInfo.dist + 1e-5);
+        const displayDistOrWeight = STATE.weighting ? weightVal.toFixed(2) : dInfo.dist.toFixed(2);
 
         const tr = document.createElement('tr');
         tr.className = `elem-row-item ${dInfo.isNearest ? 'top-k-row' : ''} ${hoveredPoint === p ? 'highlighted' : ''}`;
         tr.dataset.id = p.id;
-        tr.title = `Mẫu #${p.id + 1} - Nhấp để định vị trên đồ thị`;
+        tr.title = `${sampleName ? 'Mẫu ' + sampleName : 'Mẫu #' + (p.id + 1)} - Nhấp để định vị trên đồ thị`;
 
         tr.innerHTML = `
-          <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
-          <td>
-            <span class="class-chip-tag" style="background:${cls.color}18; color:${cls.color}; border:1px solid ${cls.color}44;">
-              <span class="class-chip-dot" style="background:${cls.color};"></span>
-              ${cls.name}
-            </span>
-          </td>
+          <td style="color:#64748b; font-weight:600; text-align:center;">${p.id + 1}</td>
+          <td style="font-weight:700; color:#1e293b;">${displaySample}</td>
+          <td style="font-weight:600; color:${chipColor};">${chipText}</td>
           <td class="feat-val">${val1}</td>
           <td class="feat-val">${val2}</td>
-          <td>
-            ${dInfo.isNearest ? `<span class="badge-rank">#${dInfo.rank}</span>` : ''}
-            <span class="dist-val">${dInfo.dist.toFixed(3)}</span>
+          <td class="dist-val" style="text-align:right;">
+            ${dInfo.isNearest ? `<span class="badge-rank" style="margin-right:2px; font-size:0.65rem; padding:1px 4px;">#${dInfo.rank}</span>` : ''}
+            <span>${displayDistOrWeight}</span>
           </td>
         `;
 
@@ -4537,7 +4633,7 @@ function updateElementsTable(pred) {
         if (isIris) {
           const raw = p.raw || [p.x, p.y, 0, 0];
           tr.innerHTML = `
-            <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
+            <td style="color:#64748b; font-weight:600;">${p.name || (p.id + 1)}</td>
             <td><span class="elem-tag-pill" style="background:${cls.color};">${cls.name}</span></td>
             <td>${raw[0].toFixed(1)}</td>
             <td>${raw[1].toFixed(1)}</td>
@@ -4552,7 +4648,7 @@ function updateElementsTable(pred) {
           `;
         } else {
           tr.innerHTML = `
-            <td style="color:#64748b; font-weight:600;">${p.id + 1}</td>
+            <td style="color:#64748b; font-weight:600;">${p.name || (p.id + 1)}</td>
             <td><span class="elem-tag-pill" style="background:${cls.color};">${cls.name}</span></td>
             <td>${p.x.toFixed(2)}</td>
             <td>${p.y.toFixed(2)}</td>
@@ -4717,6 +4813,10 @@ function updatePredictionUI(pred) {
   const nbThCol2 = $('nb-th-col2');
   if (nbThCol1) nbThCol1.textContent = info.name1;
   if (nbThCol2) nbThCol2.textContent = info.name2;
+  const nbThTarget = $('nb-th-target');
+  if (nbThTarget) nbThTarget.textContent = isRegression ? 'Điểm thi' : 'Lớp';
+  const nbThDist = $('nb-th-dist');
+  if (nbThDist) nbThDist.textContent = STATE.weighting ? 'Trọng số (1/d)' : 'Khoảng cách';
 
   const popupK = $('popup-k-badge');
   if (popupK) popupK.textContent = `k = ${STATE.k}`;
@@ -4727,33 +4827,38 @@ function updatePredictionUI(pred) {
   if (tbody) {
     tbody.innerHTML = '';
     if (PSEUDO_STATE.currentStep === 1) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Đang ở Bước 1: Khởi tạo Z (Chưa tính khoảng cách)</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Đang ở Bước 1: Khởi tạo Z (Chưa tính khoảng cách)</td></tr>';
     } else if (PSEUDO_STATE.currentStep === 2 && PSEUDO_STATE.measureRegionOpacity < 1.0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Bước 2: Đang đo khoảng cách tới các điểm...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:14px; font-size:0.8rem;">Bước 2: Đang đo khoảng cách tới các điểm...</td></tr>';
     } else {
       pred.nearest.forEach((n, idx) => {
         const nCls = STATE.classes.find(c => c.id === n.point.c) || { name: '?', color: '#64748b' };
         const val1 = info.format1(n.point);
         const val2 = info.format2(n.point);
         const chipColor = isRegression ? getColorForValue(n.point.val) : nCls.color;
-        const chipText = isRegression ? `Giá trị: ${n.point.val}` : nCls.name;
+        const chipText = isRegression ? n.point.val.toFixed(1) : nCls.name;
+
+        // Clean sample name: remove "SV " prefix, or fallback to point id+1
+        const rawName = n.point.label || n.point.name || '';
+        const sampleName = rawName.replace(/^SV\s*/i, '');
+        const displaySample = sampleName ? sampleName : (n.point.id + 1);
+
+        // Distance or Weight value (synchronized with 1/d)
+        const weightVal = 1 / (n.dist + 1e-5);
+        const displayDistOrWeight = STATE.weighting ? weightVal.toFixed(2) : n.dist.toFixed(2);
 
         const tr = document.createElement('tr');
         tr.className = `nb-row-item ${hoveredPoint === n.point ? 'highlighted' : ''}`;
         tr.dataset.id = n.point.id;
-        tr.title = `Mẫu #${n.point.id + 1} - Nhấp để định vị trên đồ thị`;
+        tr.title = `${sampleName ? 'Mẫu ' + sampleName : 'Mẫu #' + (n.point.id + 1)} - Nhấp để định vị trên đồ thị`;
 
         tr.innerHTML = `
-          <td style="color:#64748b; font-weight:600;"><span class="badge-rank">#${idx + 1}</span></td>
-          <td>
-            <span class="class-chip-tag" style="background:${chipColor}18; color:${chipColor}; border:1px solid ${chipColor}44;">
-              <span class="class-chip-dot" style="background:${chipColor};"></span>
-              ${chipText}
-            </span>
-          </td>
+          <td style="color:#64748b; font-weight:600; text-align:center;">#${idx + 1}</td>
+          <td style="font-weight:700; color:#1e293b;">${displaySample}</td>
+          <td style="font-weight:600; color:${chipColor};">${chipText}</td>
           <td class="feat-val">${val1}</td>
           <td class="feat-val">${val2}</td>
-          <td class="dist-val">${n.dist.toFixed(3)}</td>
+          <td class="dist-val" style="text-align:right;">${displayDistOrWeight}</td>
         `;
 
         tr.onmouseenter = () => {
@@ -4915,46 +5020,21 @@ function generateCircles(n = 80) {
 
 
 
-// Generator for "Đậu hay Rớt" (Pass / Fail) - Dự đoán kết quả thi sinh viên (Nhóm 5 SE313.R11)
+// Generator for "Đậu hay Rớt?" - Dữ liệu thực nghiệm thuyết trình (Nhóm 5 SE313.R11)
+// Thuộc tính: x1 = giờ tự học/tuần, x2 = số buổi vắng
+// Phân lớp: Kết quả (c = 1: Đậu, c = 0: Rớt)
+// Hồi quy: val = Điểm cuối kỳ (2.0 - 9.0)
 function generatePassFail() {
-  const pts = [];
-  // Lớp 0: Rớt (Fail) - Ôn tập ít & Điểm kiểm tra thấp
-  const failData = [
-    [3.0, 2.0], [4.0, 3.2], [5.0, 1.8], [5.5, 2.5], [6.0, 3.5],
-    [6.5, 4.2], [7.0, 2.8], [7.5, 4.8], [8.0, 4.0], [8.5, 3.2],
-    [9.0, 3.0], [9.5, 4.6], [10.0, 4.5], [10.5, 2.8], [11.0, 3.8],
-    [11.5, 4.9], [12.0, 4.8], [13.0, 3.2], [14.0, 4.0], [15.5, 3.5]
+  return [
+    { id: 0, label: 'A', name: 'A', x: 8, y: 1, z: 0, c: 1, val: 8.0, tag: 'Mẫu A: 8h học, 1 vắng → Đậu (8.0đ)' },
+    { id: 1, label: 'B', name: 'B', x: 6, y: 2, z: 0, c: 1, val: 6.5, tag: 'Mẫu B: 6h học, 2 vắng → Đậu (6.5đ)' },
+    { id: 2, label: 'C', name: 'C', x: 9, y: 3, z: 0, c: 1, val: 8.5, tag: 'Mẫu C: 9h học, 3 vắng → Đậu (8.5đ)' },
+    { id: 3, label: 'D', name: 'D', x: 7, y: 1, z: 0, c: 1, val: 7.0, tag: 'Mẫu D: 7h học, 1 vắng → Đậu (7.0đ)' },
+    { id: 4, label: 'E', name: 'E', x: 9, y: 2, z: 0, c: 1, val: 9.0, tag: 'Mẫu E: 9h học, 2 vắng → Đậu (9.0đ)' },
+    { id: 5, label: 'F', name: 'F', x: 2, y: 3, z: 0, c: 0, val: 3.5, tag: 'Mẫu F: 2h học, 3 vắng → Rớt (3.5đ)' },
+    { id: 6, label: 'G', name: 'G', x: 1, y: 5, z: 0, c: 0, val: 2.0, tag: 'Mẫu G: 1h học, 5 vắng → Rớt (2.0đ)' },
+    { id: 7, label: 'H', name: 'H', x: 5, y: 4, z: 0, c: 0, val: 4.5, tag: 'Mẫu H: 5h học, 4 vắng → Rớt (4.5đ - Điểm nhiễu)' }
   ];
-  failData.forEach(([h, g]) => {
-    pts.push({
-      id: pts.length,
-      x: h,
-      y: g,
-      z: 0,
-      c: 0,
-      tag: `SV ${h}h, ${g}đ (Rớt)`
-    });
-  });
-
-  // Lớp 1: Đậu (Pass) - Ôn tập nhiều & Điểm kiểm tra khá/giỏi
-  const passData = [
-    [12.5, 6.8], [13.5, 6.5], [14.5, 6.2], [15.0, 7.0], [16.0, 5.8],
-    [17.0, 7.5], [17.5, 8.0], [18.0, 6.5], [19.0, 8.2], [20.0, 6.0],
-    [21.0, 8.5], [22.0, 7.2], [22.5, 9.0], [24.0, 8.8], [25.0, 7.8],
-    [26.0, 9.2], [28.0, 8.0], [30.0, 9.5], [32.0, 9.0], [34.0, 9.8]
-  ];
-  passData.forEach(([h, g]) => {
-    pts.push({
-      id: pts.length,
-      x: h,
-      y: g,
-      z: 0,
-      c: 1,
-      tag: `SV ${h}h, ${g}đ (Đậu)`
-    });
-  });
-
-  return pts;
 }
 
 // Generator for "Bất động sản: Diện tích & Giá bán" - Minh họa Chuẩn hóa Min-Max
@@ -5135,17 +5215,19 @@ function setPreset(name) {
     STATE.data = generateCircles();
     STATE.z = { x: 3.5, y: 0.0, z: 0 };
     showToast('Đã nạp bộ dữ liệu Concentric Circles (make_circles)');
-  } else if (name === 'pass_fail') {
+  } else if (name === 'pass_fail' || name === 'reg_exam') {
     STATE.classes = [
-      { id: 0, name: 'Fail', color: '#ef4444' },
-      { id: 1, name: 'Pass', color: '#10b981' }
+      { id: 0, name: 'Rớt', color: '#ef4444' },
+      { id: 1, name: 'Đậu', color: '#10b981' }
     ];
     STATE.data = generatePassFail();
-    STATE.z = { x: 13.5, y: 5.0, z: 0 };
+    STATE.z = { x: 5.0, y: 3.0, z: 0 };
     STATE.k = 3;
     $('k-slider').value = 3;
     $('k-val').textContent = 'k = 3';
-    showToast('Đã nạp bộ dữ liệu Student Performance (Pass/Fail)');
+    showToast(name === 'reg_exam'
+      ? 'Đã nạp bộ dữ liệu Hồi quy: Đoán Điểm cuối kỳ (Nhóm 5)'
+      : 'Đã nạp bộ dữ liệu: Đậu hay Rớt? (Nhóm 5 - SE313)');
   } else if (name === 'real_estate' || name === 'customer_income') {
     STATE.classes = [
       { id: 0, name: 'Standard', color: '#2563eb' },
@@ -5190,10 +5272,64 @@ function setPreset(name) {
     showToast('Custom Dataset: Nhấp chuột lên đồ thị để thêm điểm!');
   }
 
+  const sel = $('preset-select');
+  if (sel && sel.value !== name) sel.value = name;
+  updateQuickQueryRow();
+  syncZInputs();
   regionDirty = true;
   updateUI();
   scheduleRegionRefresh(0);
   requestDraw2D();
+}
+
+function updateQuickQueryRow() {
+  const row = $('quick-query-row');
+  if (row) {
+    const isStudent = (STATE.preset === 'pass_fail' || STATE.preset === 'reg_exam');
+    row.style.display = isStudent ? 'flex' : 'none';
+  }
+}
+
+function setQueryZ(x, y) {
+  STATE.z.x = x;
+  STATE.z.y = y;
+  syncZInputs();
+  regionDirty = true;
+  scheduleRegionRefresh(100);
+  requestDraw2D();
+  if (PSEUDO_STATE.currentStep > 0) {
+    updatePseudocodeUI();
+    const livePred = predictKNN([STATE.z.x, STATE.z.y]);
+    if (PSEUDO_STATE.currentStep === 4) {
+      PSEUDO_STATE.winnerAnnounced = true;
+      showStaticVoteTally(livePred);
+    }
+  }
+  showToast(`Điểm truy vấn: (${x}, ${y})`);
+}
+
+function addStudentI() {
+  const existing = STATE.data.find(p => p.label === 'I');
+  if (existing) {
+    showToast('Mẫu I đã có trong danh sách!');
+    return;
+  }
+  STATE.data.push({
+    id: STATE.data.length,
+    label: 'I',
+    name: 'I',
+    x: 4,
+    y: 3,
+    z: 0,
+    c: 0,
+    val: 4.0,
+    tag: 'Mẫu I: 4h học, 3 vắng → Rớt (4.0đ)'
+  });
+  regionDirty = true;
+  scheduleRegionRefresh(0);
+  requestDraw2D();
+  updateUI();
+  showToast('Đã thêm mẫu I = (4, 3, Rớt) vào tập học!');
 }
 
 function buildAxesSelectors() {
@@ -5525,7 +5661,7 @@ updatePseudocodeUI();
 
 initElementsTableUI();
 resizeCanvas();
-setPreset('moons');
+setPreset('pass_fail');
 </script>
 </body>
 </html>

@@ -157,8 +157,8 @@ class KNN:
             d = self.metric_fn(query_pt, p_coords)
             distances.append({"index": idx, "point": p, "dist": d})
 
-        # 2. Stable sort by distance
-        distances.sort(key=lambda item: (item["dist"], item["index"]))
+        # 2. Stable sort by distance with epsilon tie-break (eliminates float noise)
+        distances.sort(key=lambda item: (round(item["dist"], 6), item["index"]))
 
         # 3. Extract k nearest neighbors
         k_actual = min(k_val, len(distances))
@@ -284,55 +284,60 @@ def evaluate_loocv(
 
 
 # ============================================================================
-# Example / Unit Test Run
+# Example / Unit Test Run with "Đậu hay Rớt?" Dataset (Nhóm 5 SE313.R11)
 # ============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("  k-NN Algorithm in Python (SE313.R11 Demo)")
-    print("=" * 60)
+    print("=" * 65)
+    print("  k-NN Algorithm in Python · Đậu hay Rớt? (Nhóm 5 - SE313.R11)")
+    print("=" * 65)
 
-    # 1. Test Classification
-    sample_cls_data = [
-        {"x": 1.0, "y": 2.0, "c": 0},
-        {"x": 1.5, "y": 1.8, "c": 0},
-        {"x": 2.0, "y": 2.5, "c": 0},
-        {"x": 5.0, "y": 6.0, "c": 1},
-        {"x": 6.0, "y": 5.5, "c": 1},
-        {"x": 5.5, "y": 7.0, "c": 1},
+    # 8 students from presentation document:
+    # x: giờ tự học/tuần, y: số buổi vắng, c: 1 (Đậu) / 0 (Rớt), val: Điểm cuối kỳ
+    students_data = [
+        {"id": 0, "label": "A", "x": 8.0, "y": 1.0, "c": 1, "val": 8.0},
+        {"id": 1, "label": "B", "x": 6.0, "y": 2.0, "c": 1, "val": 6.5},
+        {"id": 2, "label": "C", "x": 9.0, "y": 3.0, "c": 1, "val": 8.5},
+        {"id": 3, "label": "D", "x": 7.0, "y": 1.0, "c": 1, "val": 7.0},
+        {"id": 4, "label": "E", "x": 9.0, "y": 2.0, "c": 1, "val": 9.0},
+        {"id": 5, "label": "F", "x": 2.0, "y": 3.0, "c": 0, "val": 3.5},
+        {"id": 6, "label": "G", "x": 1.0, "y": 5.0, "c": 0, "val": 2.0},
+        {"id": 7, "label": "H", "x": 5.0, "y": 4.0, "c": 0, "val": 4.5},
     ]
 
-    knn_cls = KNN(k=3, metric="euclid", norm=False, weighting=False, task="classification")
-    knn_cls.fit(sample_cls_data)
+    class_names = {0: "Rớt", 1: "Đậu"}
 
-    query_z = [1.8, 2.2]
-    pred_cls = knn_cls.predict(query_z)
-    print(f"\n[Classification Test]")
-    print(f"Query Point Z: {query_z}")
-    print(f"Predicted Class: {pred_cls['label']}")
-    print(f"Votes: {pred_cls['votes']}")
-    print(f"k Nearest Neighbors: {len(pred_cls['nearest'])} points (radius = {pred_cls['radius']:.3f})")
+    # 1. Classification for Z = (5, 3)
+    query_z = [5.0, 3.0]
+    print(f"\n[1. Phân lớp cho Điểm truy vấn Z = (5, 3)]")
 
-    cv_cls = evaluate_loocv(sample_cls_data, k=3, task="classification")
-    print(f"LOOCV Accuracy: {cv_cls['accuracy']}% ({cv_cls['correct']}/{cv_cls['total']})")
+    for k_val in [1, 3, 5]:
+        model = KNN(k=k_val, metric="euclid", task="classification")
+        model.fit(students_data, classes=[0, 1])
+        res = model.predict(query_z)
+        nb_str = ", ".join([f"{n['point']['label']} (d={n['dist']:.3f})" for n in res["nearest"]])
+        print(f" • k = {k_val}: Dự đoán = {class_names[res['label']]} | Phiếu = {res['votes']} | Láng giềng: [{nb_str}]")
 
-    # 2. Test Regression
-    sample_reg_data = [
-        {"x": 30.0, "y": 1.0, "val": 1.5},
-        {"x": 50.0, "y": 2.0, "val": 2.8},
-        {"x": 80.0, "y": 3.0, "val": 4.5},
-        {"x": 100.0, "y": 4.0, "val": 6.0},
-    ]
+    # Manhattan comparison for Z = (5, 3) at k = 3
+    model_man = KNN(k=3, metric="manhattan", task="classification")
+    model_man.fit(students_data, classes=[0, 1])
+    res_man = model_man.predict(query_z)
+    nb_man = ", ".join([f"{n['point']['label']} (d={n['dist']:.1f})" for n in res_man["nearest"]])
+    print(f" • Manhattan (k = 3): Dự đoán = {class_names[res_man['label']]} | Láng giềng: [{nb_man}] (Đổi hàm đổi kết quả)")
 
-    knn_reg = KNN(k=2, metric="euclid", norm=True, weighting=True, task="regression")
-    knn_reg.fit(sample_reg_data)
+    # 2. Regression for Z = (5, 3) (Điểm cuối kỳ)
+    print(f"\n[2. Hồi quy dự đoán Điểm cuối kỳ cho Z = (5, 3)]")
+    for k_val in [1, 3, 5, 8]:
+        reg_model = KNN(k=k_val, metric="euclid", task="regression")
+        reg_model.fit(students_data)
+        res_reg = reg_model.predict(query_z)
+        vals_str = ", ".join([f"{n['point']['label']}:{n['point']['val']}" for n in res_reg["nearest"]])
+        print(f" • k = {k_val}: ŷ = {res_reg['y_hat']} điểm | Láng giềng: [{vals_str}]")
 
-    query_reg = [60.0, 2.5]
-    pred_reg = knn_reg.predict(query_reg)
-    print(f"\n[Regression Test (with Normalization & 1/d Weighting)]")
-    print(f"Query Point Z: {query_reg}")
-    print(f"Predicted Value y_hat: {pred_reg['y_hat']}")
-
-    cv_reg = evaluate_loocv(sample_reg_data, k=2, norm=True, weighting=True, task="regression")
-    print(f"LOOCV RMSE: {cv_reg['rmse']}")
-    print("=" * 60)
+    # 3. Model Evaluation LOOCV
+    print(f"\n[3. Đánh giá mô hình Kiểm thử chéo Leave-One-Out (LOOCV)]")
+    cv_cls = evaluate_loocv(students_data, k=3, task="classification")
+    print(f" • Phân lớp k = 3 LOOCV: Accuracy = {cv_cls['accuracy']}% ({cv_cls['correct']}/{cv_cls['total']} đúng)")
+    cv_reg = evaluate_loocv(students_data, k=3, task="regression")
+    print(f" • Hồi quy k = 3 LOOCV: RMSE = {cv_reg['rmse']}, MSE = {cv_reg['mse']}")
+    print("=" * 65)
