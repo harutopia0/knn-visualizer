@@ -283,6 +283,16 @@ def evaluate_loocv(
     }
 
 
+def format_casio(val: float, max_dec: int = 10) -> str:
+    """Format floating point numbers like Casio calculator (up to max_dec decimal places, stripping trailing zeros)."""
+    if val is None:
+        return "—"
+    s = f"{float(val):.{max_dec}f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return "0" if s == "-0" or not s else s
+
+
 # ============================================================================
 # Example / Unit Test Run with "Đậu hay Rớt?" Dataset (Nhóm 5 SE313.R11)
 # ============================================================================
@@ -315,15 +325,22 @@ if __name__ == "__main__":
         model = KNN(k=k_val, metric="euclid", task="classification")
         model.fit(students_data, classes=[0, 1])
         res = model.predict(query_z)
-        nb_str = ", ".join([f"{n['point']['label']} (d={n['dist']:.3f})" for n in res["nearest"]])
+        nb_str = ", ".join([f"{n['point']['label']} (d={format_casio(n['dist'])})" for n in res["nearest"]])
         print(f" • k = {k_val}: Dự đoán = {class_names[res['label']]} | Phiếu = {res['votes']} | Láng giềng: [{nb_str}]")
 
     # Manhattan comparison for Z = (5, 3) at k = 3
     model_man = KNN(k=3, metric="manhattan", task="classification")
     model_man.fit(students_data, classes=[0, 1])
     res_man = model_man.predict(query_z)
-    nb_man = ", ".join([f"{n['point']['label']} (d={n['dist']:.1f})" for n in res_man["nearest"]])
+    nb_man = ", ".join([f"{n['point']['label']} (d={format_casio(n['dist'])})" for n in res_man["nearest"]])
     print(f" • Manhattan (k = 3): Dự đoán = {class_names[res_man['label']]} | Láng giềng: [{nb_man}] (Đổi hàm đổi kết quả)")
+
+    # Cosine comparison for Z = (5, 3) at k = 5
+    model_cos = KNN(k=5, metric="cosine", task="classification")
+    model_cos.fit(students_data, classes=[0, 1])
+    res_cos = model_cos.predict(query_z)
+    nb_cos = ", ".join([f"{n['point']['label']} (d={format_casio(n['dist'])})" for n in res_cos["nearest"]])
+    print(f" • Cosine (k = 5): Dự đoán = {class_names[res_cos['label']]} | Láng giềng: [{nb_cos}]")
 
     # 2. Regression for Z = (5, 3) (Điểm cuối kỳ)
     print(f"\n[2. Hồi quy dự đoán Điểm cuối kỳ cho Z = (5, 3)]")

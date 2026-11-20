@@ -661,7 +661,7 @@
       flex: 1;
       min-height: 0;
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: auto;
       background: #ffffff;
       scrollbar-width: thin;
       scrollbar-color: #cbd5e1 transparent;
@@ -2020,6 +2020,19 @@
 <script src="knn.js"></script>
 <script>
 /**
+ * Format numbers like a Casio calculator:
+ * Up to maxDec (default 10) decimal places, stripping redundant trailing zeros.
+ */
+function formatCasio(val, maxDec = 10) {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  let s = Number(val).toFixed(maxDec);
+  if (s.indexOf('.') !== -1) {
+    s = s.replace(/0+$/, '').replace(/\.$/, '');
+  }
+  return s === '-0' || s === '' ? '0' : s;
+}
+
+/**
  * k-NN Grapher - Desmos Style Interactive Simulator
  * Group 5 - SE313.R11
  */
@@ -2559,13 +2572,13 @@ const STATE = {
         rowsContainer.innerHTML = pred.nearest.map((n, idx) => {
           const val = (n.point.val !== undefined) ? n.point.val : n.point.y;
           const col = getColorForValue(val);
-          const w = STATE.weighting ? (1 / (n.dist + 1e-5)).toFixed(2) : '1.0';
+          const w = STATE.weighting ? formatCasio(1 / (n.dist + 1e-5), 10) : '1.0';
           return `
             <div class="tally-row" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.84rem;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-weight:700; color:#d97706; font-size:0.75rem;">#${idx + 1}</span>
                 <span style="width:10px; height:10px; border-radius:50%; background:${col}; flex-shrink:0;"></span>
-                <span style="font-weight:600; color:#1e293b;">d = ${n.dist.toFixed(2)}</span>
+                <span style="font-weight:600; color:#1e293b;">d = ${formatCasio(n.dist, 10)}</span>
               </div>
               <div style="display:flex; align-items:baseline; gap:6px; font-weight:700;">
                 <span style="color:${col}; font-size:0.95rem;">y = ${val.toFixed(2)}</span>
@@ -4541,9 +4554,9 @@ function updateElementsTable(pred) {
         const sampleName = rawName.replace(/^SV\s*/i, '');
         const displaySample = sampleName ? sampleName : (p.id + 1);
 
-        // Distance or Weight value (synchronized with 1/d)
+        // Distance or Weight value (synchronized with 1/d, Casio 10-decimal formatting)
         const weightVal = 1 / (dInfo.dist + 1e-5);
-        const displayDistOrWeight = STATE.weighting ? weightVal.toFixed(2) : dInfo.dist.toFixed(2);
+        const displayDistOrWeight = STATE.weighting ? formatCasio(weightVal, 10) : formatCasio(dInfo.dist, 10);
 
         const tr = document.createElement('tr');
         tr.className = `elem-row-item ${dInfo.isNearest ? 'top-k-row' : ''} ${hoveredPoint === p ? 'highlighted' : ''}`;
@@ -4639,7 +4652,7 @@ function updateElementsTable(pred) {
             <td>${raw[1].toFixed(1)}</td>
             <td>${raw[2].toFixed(1)}</td>
             <td>${raw[3].toFixed(1)}</td>
-            <td><b>${dInfo.dist.toFixed(3)}</b></td>
+            <td><b>${formatCasio(dInfo.dist, 10)}</b></td>
             <td>${dInfo.isNearest ? `<span class="top-k-badge">Top ${dInfo.rank}</span>` : `<span style="color:#94a3b8;">#${dInfo.rank}</span>`}</td>
             <td style="text-align:center; white-space:nowrap;">
               <button class="elem-btn-action btn-focus" title="Định vị">Focus</button>
@@ -4653,7 +4666,7 @@ function updateElementsTable(pred) {
             <td>${p.x.toFixed(2)}</td>
             <td>${p.y.toFixed(2)}</td>
             <td>${p.tag || '-'}</td>
-            <td><b>${dInfo.dist.toFixed(3)}</b></td>
+            <td><b>${formatCasio(dInfo.dist, 10)}</b></td>
             <td>${dInfo.isNearest ? `<span class="top-k-badge">Top ${dInfo.rank}</span>` : `<span style="color:#94a3b8;">#${dInfo.rank}</span>`}</td>
             <td style="text-align:center; white-space:nowrap;">
               <button class="elem-btn-action btn-focus" title="Định vị">Focus</button>
@@ -4728,10 +4741,10 @@ function updatePredictionUI(pred) {
       $('radius-badge').textContent = 'Z=(0,0,0) (Chưa xác định hướng)';
     } else {
       const thetaDeg = (Math.acos(Math.max(-1, Math.min(1, 1 - pred.r))) * 180 / Math.PI).toFixed(1);
-      $('radius-badge').textContent = `R = ${pred.r.toFixed(3)} (θ ≈ ${thetaDeg}°)`;
+      $('radius-badge').textContent = `R = ${formatCasio(pred.r, 10)} (θ ≈ ${thetaDeg}°)`;
     }
   } else {
-    $('radius-badge').textContent = `R = ${pred.r.toFixed(3)}`;
+    $('radius-badge').textContent = `R = ${formatCasio(pred.r, 10)}`;
   }
 
   // While dragging Z, throttle heavy DOM table rebuilds to max once every 100ms
@@ -4742,7 +4755,7 @@ function updatePredictionUI(pred) {
   lastTableUpdateTime = now;
 
   // Cache signature: if prediction outcome and nearest set are identical, skip heavy DOM rebuild
-  const nearestIds = pred.nearest.map(n => n.point.id + ':' + n.dist.toFixed(2)).join(',');
+  const nearestIds = pred.nearest.map(n => n.point.id + ':' + formatCasio(n.dist, 10)).join(',');
   const predSignature = `${STATE.k}|${STATE.metric}|${STATE.weighting}|${STATE.norm}|${pred.label}|${nearestIds}|${PSEUDO_STATE.currentStep}|${PSEUDO_STATE.winnerAnnounced}`;
   if (predSignature === lastPredSignature) {
     return;
@@ -4843,9 +4856,9 @@ function updatePredictionUI(pred) {
         const sampleName = rawName.replace(/^SV\s*/i, '');
         const displaySample = sampleName ? sampleName : (n.point.id + 1);
 
-        // Distance or Weight value (synchronized with 1/d)
+        // Distance or Weight value (synchronized with 1/d, Casio 10-decimal formatting)
         const weightVal = 1 / (n.dist + 1e-5);
-        const displayDistOrWeight = STATE.weighting ? weightVal.toFixed(2) : n.dist.toFixed(2);
+        const displayDistOrWeight = STATE.weighting ? formatCasio(weightVal, 10) : formatCasio(n.dist, 10);
 
         const tr = document.createElement('tr');
         tr.className = `nb-row-item ${hoveredPoint === n.point ? 'highlighted' : ''}`;

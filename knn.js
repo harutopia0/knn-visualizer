@@ -268,13 +268,34 @@ function evaluateLOOCV(data = (typeof STATE !== 'undefined' ? STATE.data : []), 
   };
 }
 
+/**
+ * Format numbers like a Casio calculator:
+ * Up to maxDec (default 10) decimal places, stripping redundant trailing zeros.
+ * Examples:
+ *   0 -> "0"
+ *   0.0 -> "0"
+ *   10.0 -> "10"
+ *   0.0350000000 -> "0.035"
+ *   0.0034179688 -> "0.0034179688"
+ *   2.5 -> "2.5"
+ */
+function formatCasio(val, maxDec = 10) {
+  if (val === null || val === undefined || isNaN(val)) return '—';
+  let s = Number(val).toFixed(maxDec);
+  if (s.indexOf('.') !== -1) {
+    s = s.replace(/0+$/, '').replace(/\.$/, '');
+  }
+  return s === '-0' || s === '' ? '0' : s;
+}
+
 // Module export for browser and Node.js
 const KNN_CORE = {
   DIST,
   getBounds,
   normalizePoint,
   predictKNN,
-  evaluateLOOCV
+  evaluateLOOCV,
+  formatCasio
 };
 
 if (typeof window !== 'undefined') {
@@ -283,6 +304,7 @@ if (typeof window !== 'undefined') {
   window.normalizePoint = normalizePoint;
   window.predictKNN = predictKNN;
   window.evaluateLOOCV = evaluateLOOCV;
+  window.formatCasio = formatCasio;
   window.KNN_CORE = KNN_CORE;
 }
 
